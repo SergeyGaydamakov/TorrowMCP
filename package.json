@@ -1,0 +1,35 @@
+{
+  "name": "torrow-mcp-service",
+  "version": "1.0.0",
+  "description": "MCP server for Torrow service - manages Notes and Archives",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "start": "node dist/index.js",
+    "debug": "tsx --inspect-brk src/index.ts",
+    "dev-inspector": "set DANGEROUSLY_OMIT_AUTH=1&& set CLIENT_PORT=8080&& set SERVER_PORT=9000&& set DOTENV_CONFIG_DEBUG=false&& npx @modelcontextprotocol/inspector tsx src/index.ts",
+    "inspector": "set DANGEROUSLY_OMIT_AUTH=1&& set CLIENT_PORT=8080&& set SERVER_PORT=9000&& set DOTENV_CONFIG_DEBUG=false&& npx @modelcontextprotocol/inspector node dist/index.js",
+    "test": "jest",
+    "test:watch": "jest --watch"
+  },
+  "keywords": ["mcp", "torrow", "notes", "archives", "server"],
+  "author": "Torrow MCP Service",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "zod": "^3.22.4",
+    "dotenv": "^16.3.1",
+    "axios": "^1.6.0"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/inspector": "^0.16.8",
+    "@types/node": "^20.0.0",
+    "@types/jest": "^29.5.0",
+    "typescript": "^5.3.0",
+    "tsx": "^4.0.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.0"
+  }
+}
