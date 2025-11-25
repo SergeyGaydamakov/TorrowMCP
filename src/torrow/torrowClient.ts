@@ -2,8 +2,8 @@
  * Torrow API client wrapper
  */
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
-import { TorrowNote, SearchParams, SearchResult, ApiError } from '../common/types.js';
-import { TorrowApiError, AuthenticationError } from '../common/errors.js';
+import { TorrowNote, TorrowContext, SearchParams, SearchResult, ApiError, NoteViewResponse } from '../common/types.js';
+import { TorrowApiError, AuthenticationError, ContextError } from '../common/errors.js';
 import { NotFoundError } from '../common/errors.js';
 
 // Torrow API base URL
@@ -141,6 +141,36 @@ export class TorrowClient {
   }
 
   /**
+   * Maps NoteViewResponse to TorrowNote
+   */
+  private mapNoteViewToTorrowNote(item: NoteViewResponse): TorrowNote {
+    return {
+      id: item.itemObject?.id || '',
+      name: item.name || '',
+      text: item.data,
+      tags: item.tags,
+      noteType: item.noteType,
+      meta: item.itemObject?.meta,
+      groupInfo: item.groupInfo
+    };
+  }
+
+  /**
+   * Gets notes in element with specified parentId
+   */
+  async getNotesByParentId(parentId: string): Promise<TorrowNote[]> {
+    const params: Record<string, string> = {
+      take: '20',
+      skip: '0'
+    };
+    
+    const response: AxiosResponse<NoteViewResponse[]> = await this.client.get(`/api/v1/notes/${parentId}/views/user`, { params });
+    
+    const items = response.data || [];
+    return items.map(item => this.mapNoteViewToTorrowNote(item));
+  }
+
+  /**
    * Sets note as group (archive)
    */
   async setNoteAsGroup(torrowId: string): Promise<void> {
@@ -208,32 +238,16 @@ export class TorrowClient {
   }
 
   /**
-   * Checks if archive with name exists
-   */
-  async archiveExists(name: string): Promise<boolean> {
-    try {
-      const result = await this.searchNotes({
-        text: name,
-        take: 50 // Search more items to find archives
-      });
-      
-      return result.items.some(note => 
-        note.name?.toLowerCase() === name.toLowerCase() && 
-        note.groupInfo?.isGroup === true
-      );
-    } catch (error) {
-      return false;
-    }
-  }
-
-  /**
    * Gets archives list
    */
-  async getArchives(): Promise<TorrowNote[]> {
+  async getArchives(mcpContextId?: string): Promise<TorrowNote[]> {
+    if (!mcpContextId) {
+      throw new ContextError('В методе getArchives не указан ID служебного раздела "MCP"');
+    }
     try {
-      const result = await this.searchNotes({ take: 50 });
+      const result = await this.getNotesByParentId(mcpContextId);
       
-      return result.items.filter(note => note.groupInfo?.isGroup === true);
+      return result;
     } catch (error) {
       throw new TorrowApiError(`Failed to get archives: ${error}`);
     }
@@ -242,7 +256,10 @@ export class TorrowClient {
   /**
    * Finds archive by name
    */
-  async findArchiveByName(name: string): Promise<TorrowNote | null> {
+  async findArchiveByName(mcpContextId?: string, name: string): Promise<TorrowNote | null> {
+    if (!mcpContextId) {
+      throw new ContextError('В методе findArchiveByName не указан ID служебного раздела "MCP"');
+    }
     try {
       const archives = await this.getArchives();
       return archives.find(archive => 
@@ -271,5 +288,49 @@ export class TorrowClient {
     } catch (error) {
       return null;
     }
+  }
+
+  /**
+   * Creates a new context (Раздел)
+   */
+  async createContext(name: string): Promise<TorrowContext> {
+    const requestBody: Record<string, unknown> = {};
+    requestBody.name = name;
+    requestBody.discriminator = 'ContextItem';
+    // requestBody.profileId = profileId;
+   
+    const response: AxiosResponse<TorrowContext> = await this.client.post('/api/v1/contexts', requestBody);
+
+    return response.data;
+  }
+
+  /**
+   * Gets list of contexts (Разделы)
+   */
+  async getContexts(): Promise<TorrowContext[]> {
+    const params: Record<string, string> = {
+      take: '20',
+      skip: '0',
+      lmfrom: '1970-01-01T00:00:00.000Z',
+      includeDeleted: 'false',
+      sort: 'OrderDesc'
+    };
+    
+    const response: AxiosResponse<TorrowContext[]> = await this.client.get('/api/v1/contexts/personallist', { params });
+    
+    return response.data || [];
+  }
+
+  /**
+   * Поиск или создание служебного раздела "MCP"
+   */
+  async findOrCreateMCPContext(): Promise<TorrowContext> {
+    const contexts = await this.getContexts();
+    const mcpContext = contexts.find(context => context.name === 'MCP');
+    if (mcpContext) {
+      return mcpContext;
+    }
+    const newContext = await this.createContext('MCP');
+    return newContext;
   }
 }

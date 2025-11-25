@@ -3,6 +3,7 @@
  */
 import { ReadResourceRequest, ReadResourceResult } from '@modelcontextprotocol/sdk/types.js';
 import { TorrowClient } from '../torrow/torrowClient.js';
+import { contextStore } from '../context/contextStore.js';
 import { RESOURCE_NOTE, RESOURCE_ARCHIVE, RESOURCE_ARCHIVES_LIST } from './resourceConstants.js';
 import { NoteResourceSchema, ArchiveResourceSchema } from './resourceSchemas.js';
 import { NotFoundError, ValidationError } from '../common/errors.js';
@@ -79,14 +80,24 @@ export class ResourceHandlers {
    */
   async handleArchivesListResource(request: ReadResourceRequest): Promise<ReadResourceResult> {
     try {
-      const archives = await this.torrowClient.getArchives();
+      // Find or create MCP context
+      let mcpContextId = contextStore.getMcpContextId();
+      if (!mcpContextId) {
+        const mcpContext = await this.torrowClient.findOrCreateMCPContext();
+        mcpContextId = mcpContext.id;
+        contextStore.setMcpContextId(mcpContextId);
+      }
+
+      const archives = await this.torrowClient.getArchives(mcpContextId);
+      const currentArchiveId = contextStore.getArchiveId();
 
       const archivesList = archives.map(archive => ({
         id: archive.id,
         name: archive.name,
         text: archive.text,
         tags: archive.tags,
-        meta: archive.meta
+        meta: archive.meta,
+        isCurrent: archive.id === currentArchiveId
       }));
 
       return {

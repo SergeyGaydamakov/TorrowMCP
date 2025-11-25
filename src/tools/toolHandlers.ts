@@ -39,11 +39,13 @@ export class ToolHandlers {
 
     // Check if note with this name already exists in current archive
     const currentArchiveId = contextStore.getArchiveId();
-    if (currentArchiveId) {
-      const exists = await this.torrowClient.noteExistsInArchive(parsed.name, currentArchiveId);
-      if (exists) {
-        throw new ValidationError(`Заметка с названием "${parsed.name}" уже существует в каталоге`);
-      }
+    if (!currentArchiveId) {
+      throw new ContextError('Выберите существующий каталог или создайте новый, чтобы создать заметку.');
+    }
+
+    const exists = await this.torrowClient.noteExistsInArchive(parsed.name, currentArchiveId);
+    if (exists) {
+      throw new ValidationError(`Заметка с названием "${parsed.name}" уже существует в каталоге`);
     }
 
     const note = await this.torrowClient.createNote({
@@ -53,7 +55,7 @@ export class ToolHandlers {
     }, currentArchiveId);
 
     // Set as current note
-    contextStore.setNoteId(note.id);
+    contextStore.setNoteId(note.id, parsed.name);
 
     return {
       content: [{
@@ -74,7 +76,7 @@ export class ToolHandlers {
 
     const currentNoteId = contextStore.getNoteId();
     if (!currentNoteId) {
-      throw new ContextError('Нет текущей заметки для изменения');
+      throw new ContextError('Укажите заметку, которую нужно изменить.');
     }
 
     const updatedNote = await this.torrowClient.updateNote(currentNoteId, {
@@ -97,7 +99,7 @@ export class ToolHandlers {
   async deleteNote(request: CallToolRequest): Promise<CallToolResult> {
     const currentNoteId = contextStore.getNoteId();
     if (!currentNoteId) {
-      throw new ContextError('Нет текущей заметки для удаления');
+      throw new ContextError('Укажите заметку, которую нужно удалить.');
     }
 
     // Get note info before deletion
@@ -106,7 +108,7 @@ export class ToolHandlers {
     await this.torrowClient.deleteNote(currentNoteId);
     
     // Clear current note
-    contextStore.setNoteId(undefined);
+    contextStore.setNoteId(undefined, undefined);
 
     return {
       content: [{
@@ -160,14 +162,20 @@ export class ToolHandlers {
     
     validateName(parsed.name);
 
+    if (!contextStore.getMcpContextId()) {
+      // Find or create MCP context
+      const mcpContext = await this.torrowClient.findOrCreateMCPContext();
+      contextStore.setMcpContextId(mcpContext.id);
+    }
+
     // Check archive limit (max 10)
-    const existingArchives = await this.torrowClient.getArchives();
+    const existingArchives = await this.torrowClient.getArchives(contextStore.getMcpContextId());
     if (existingArchives.length >= 10) {
       throw new ValidationError('Превышен лимит каталогов (максимум 10)');
     }
 
     // Check if archive with this name already exists
-    const exists = await this.torrowClient.archiveExists(parsed.name);
+    const exists = existingArchives.find(archive => archive.name.toLowerCase() === parsed.name.toLowerCase());
     if (exists) {
       throw new ValidationError(`Каталог с названием "${parsed.name}" уже существует`);
     }
@@ -177,13 +185,13 @@ export class ToolHandlers {
       name: parsed.name,
       text: parsed.text,
       tags: parsed.tags
-    });
+    }, contextStore.getMcpContextId());
 
     // Convert to archive
     await this.torrowClient.setNoteAsGroup(note.id);
 
     // Set as current archive
-    contextStore.setArchiveId(note.id);
+    contextStore.setArchiveId(note.id, parsed.name);
 
     return {
       content: [{
@@ -203,8 +211,9 @@ export class ToolHandlers {
     validateName(parsed.name);
 
     const currentArchiveId = contextStore.getArchiveId();
+    const currentArchiveName = contextStore.getArchiveName();
     if (!currentArchiveId) {
-      throw new ContextError('Нет текущего каталога для изменения');
+      throw new ContextError('Укажите каталог, который нужно изменить.');
     }
 
     const updatedArchive = await this.torrowClient.updateNote(currentArchiveId, {
@@ -216,7 +225,7 @@ export class ToolHandlers {
     return {
       content: [{
         type: 'text',
-        text: `Каталог "${parsed.name}" успешно обновлен`
+        text: `Каталог "${currentArchiveName}" успешно обновлен`
       }]
     };
   }
@@ -228,22 +237,20 @@ export class ToolHandlers {
     const params = DeleteArchiveSchema.parse(request.params.arguments);
     
     const currentArchiveId = contextStore.getArchiveId();
+    const currentArchiveName = contextStore.getArchiveName();
     if (!currentArchiveId) {
-      throw new ContextError('Нет текущего каталога для удаления');
+      throw new ContextError('Укажите каталог, который нужно удалить.');
     }
 
-    // Get archive info before deletion
-    const archive = await this.torrowClient.getNote(currentArchiveId);
-    
     await this.torrowClient.deleteNote(currentArchiveId, params.cascade);
     
     // Clear current archive
-    contextStore.setArchiveId(undefined);
+    contextStore.setArchiveId(undefined, undefined);
 
     return {
       content: [{
         type: 'text',
-        text: `Каталог "${archive.name}" успешно удален${params.cascade ? ' со всеми заметками' : ''}`
+        text: `Каталог "${currentArchiveName}" успешно удален ${params.cascade ? ' со всеми заметками' : ''}`
       }]
     };
   }

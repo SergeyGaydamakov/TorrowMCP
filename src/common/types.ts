@@ -25,10 +25,20 @@ export interface TorrowArchive extends TorrowNote {
   };
 }
 
+// Раздел Torrow (Context)
+export interface TorrowContext {
+  id: string;
+  name: string;
+  [key: string]: unknown;
+}
+
 // Контекст общения
 export interface Context {
   archiveId?: string;
+  archiveName?: string;
   noteId?: string;
+  noteName?: string;
+  contextId?: string;
 }
 
 // Разобранная фраза
@@ -58,4 +68,24 @@ export interface ApiError {
   message: string;
   code?: string;
   details?: unknown;
+}
+
+// Response structure from /api/v1/notes/{parentId}/views/user
+export interface NoteViewResponse {
+  itemObject?: {
+    id: string;
+    meta?: {
+      version: number;
+      createdDate: string;
+      modifiedDate: string;
+    };
+  };
+  name: string;
+  data?: string;
+  tags?: string[];
+  noteType?: string;
+  groupInfo?: {
+    isGroup: boolean;
+  };
+  [key: string]: unknown;
 }
