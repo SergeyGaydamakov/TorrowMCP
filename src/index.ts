@@ -13,9 +13,11 @@ import {
   ReadResourceRequestSchema,
   ListPromptsRequestSchema,
   GetPromptRequestSchema,
+  CompleteRequestSchema,
   CallToolRequest,
   ReadResourceRequest,
-  GetPromptRequest
+  GetPromptRequest,
+  CompleteRequest
 } from '@modelcontextprotocol/sdk/types.js';
 
 import { TorrowClient } from './torrow/torrowClient.js';
@@ -46,7 +48,8 @@ class TorrowMcpServer {
         capabilities: {
           resources: {},
           tools: {},
-          prompts: {}
+          prompts: {},
+          completions: {}
         }
       }
     );
@@ -107,6 +110,11 @@ class TorrowMcpServer {
 
     this.server.setRequestHandler(GetPromptRequestSchema, async (request: GetPromptRequest) => {
       return this.promptHandlers.handlePromptRequest(request);
+    });
+
+    // Completions
+    this.server.setRequestHandler(CompleteRequestSchema, async (request: CompleteRequest) => {
+      return this.promptHandlers.handleCompletionRequest(request);
     });
   }
 

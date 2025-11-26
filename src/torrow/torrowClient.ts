@@ -65,6 +65,52 @@ export class TorrowClient {
   /**
    * Creates a new note
    */
+  async createArchive(note: Partial<TorrowNote>, parentId?: string, profileId?: string): Promise<TorrowNote> {
+    const params: Record<string, string> = {};
+    if (parentId) {
+      params.parentId = parentId;
+    }
+    if (profileId) {
+      params.profileId = profileId;
+    }
+    
+    // Build request body, filtering out undefined values
+    const requestBody: Record<string, unknown> = {};
+    if (note.name !== undefined) {
+      requestBody.name = note.name;
+    }
+    if (note.text !== undefined) {
+      requestBody.data = note.text;
+    }
+    if (note.tags !== undefined) {
+      requestBody.tags = note.tags;
+    }
+    requestBody.noteType = note.noteType || 'Text';
+    requestBody.discriminator = 'NoteItem';
+    requestBody.publicityType = 'Link';
+    requestBody.files = [];
+    requestBody.imagePreviewSize = 'Small';
+    requestBody.publicityType = 'Link';
+    // requestBody.searchMode = 'NoneSearchMode';
+    // requestBody.anyoneAccess = 'Read';
+
+    requestBody.groupInfo = {
+      rolesToInclude: ["Owner", "Manager"],
+      rolesToReadItems: ["Owner", "Editor", "Manager", "Reader", "PublicReader"],
+      rolesToReadSubscribers: null,
+      rolesToSearchItems: ["Owner", "Editor", "Manager", "Reader", "PublicReader"],
+      rolesToSearchSubscribers: null,
+      rolesToUpdateItems: ["Owner", "Editor", "Manager"]
+    };
+
+    const response: AxiosResponse<TorrowNote> = await this.client.post('/api/v1/notes', requestBody, { params });
+
+    return response.data;
+  }
+
+  /**
+   * Creates a new note
+   */
   async createNote(note: Partial<TorrowNote>, parentId?: string, profileId?: string): Promise<TorrowNote> {
     const params: Record<string, string> = {};
     if (parentId) {
@@ -90,6 +136,9 @@ export class TorrowClient {
     requestBody.publicityType = 'Link';
     requestBody.files = [];
     requestBody.imagePreviewSize = 'Small';
+    requestBody.publicityType = 'Link';
+    // requestBody.searchMode = 'NoneSearchMode';
+    // requestBody.anyoneAccess = 'Read';
     
     const response: AxiosResponse<TorrowNote> = await this.client.post('/api/v1/notes', requestBody, { params });
 
@@ -156,15 +205,30 @@ export class TorrowClient {
   }
 
   /**
-   * Gets notes in element with specified parentId
+   * Gets user notes in element with specified parentId
    */
-  async getNotesByParentId(parentId: string): Promise<TorrowNote[]> {
+  async getUserNotesByParentId(parentId: string, take?: number, skip?: number): Promise<TorrowNote[]> {
     const params: Record<string, string> = {
-      take: '20',
-      skip: '0'
+      take: take?.toString() || '10',
+      skip: skip?.toString() || '0'
     };
     
     const response: AxiosResponse<NoteViewResponse[]> = await this.client.get(`/api/v1/notes/${parentId}/views/user`, { params });
+    
+    const items = response.data || [];
+    return items.map(item => this.mapNoteViewToTorrowNote(item));
+  }
+
+  /**
+   * Gets pinned notes in element with specified parentId
+   */
+  async getPinnedNotesByParentId(parentId: string, take?: number, skip?: number): Promise<TorrowNote[]> {
+    const params: Record<string, string> = {
+      take: take?.toString() || '10',
+      skip: skip?.toString() || '0'
+    };
+    
+    const response: AxiosResponse<NoteViewResponse[]> = await this.client.get(`/api/v1/notes/${parentId}/views/pinned`, { params });
     
     const items = response.data || [];
     return items.map(item => this.mapNoteViewToTorrowNote(item));
@@ -185,6 +249,22 @@ export class TorrowClient {
   }
 
   /**
+   * Adds note to group (includes note in group)
+   */
+  async addNoteToGroup(noteId: string, parentId: string, tags?: string[]): Promise<void> {
+    const params: Record<string, string> = {
+      parentId: parentId
+    };
+    // Second call: update groups
+    const updateGroupsBody = [{
+      groupId: parentId,
+      include: true,
+      tags: tags || []
+    }];
+    await this.client.put(`/api/v1/notes/${noteId}/updategroups`, updateGroupsBody, { params });
+  }
+
+  /**
    * Searches notes
    */
   async searchNotes(params: SearchParams): Promise<SearchResult> {
@@ -202,6 +282,12 @@ export class TorrowClient {
     
     if (params.skip !== undefined) {
       queryParams.skip = params.skip.toString();
+    } else {
+      queryParams.skip = '0';
+    }
+
+    if (params.distance) {
+      queryParams.distance = params.distance.toString();
     }
 
     // If archiveId is provided, search within that archive
@@ -209,12 +295,13 @@ export class TorrowClient {
       queryParams.groupIds = params.archiveId;
     }
 
-    const response: AxiosResponse<{ items: TorrowNote[]; totalCount: number }> = 
+    const response: AxiosResponse<NoteViewResponse[]> = 
       await this.client.get('/api/v1/search/notes', { params: queryParams });
 
+    const items = response.data || [];
     return {
-      items: response.data.items || [],
-      totalCount: response.data.totalCount || 0
+      items: items.map(item => this.mapNoteViewToTorrowNote(item)),
+      totalCount: items.length
     };
   }
 
@@ -226,7 +313,8 @@ export class TorrowClient {
       const result = await this.searchNotes({
         text: name,
         archiveId,
-        take: 1
+        take: 20,    // Так поиск по подстроке, то нужно взять больше заметок, чтобы найти нужную
+        distance: undefined
       });
       
       return result.items.some(note => 
@@ -245,7 +333,7 @@ export class TorrowClient {
       throw new ContextError('В методе getArchives не указан ID служебного раздела "MCP"');
     }
     try {
-      const result = await this.getNotesByParentId(mcpContextId);
+      const result = await this.getUserNotesByParentId(mcpContextId, 20, 0);
       
       return result;
     } catch (error) {
@@ -256,12 +344,12 @@ export class TorrowClient {
   /**
    * Finds archive by name
    */
-  async findArchiveByName(mcpContextId?: string, name: string): Promise<TorrowNote | null> {
+  async findArchiveByName(name: string, mcpContextId?: string): Promise<TorrowNote | null> {
     if (!mcpContextId) {
       throw new ContextError('В методе findArchiveByName не указан ID служебного раздела "MCP"');
     }
     try {
-      const archives = await this.getArchives();
+      const archives = await this.getArchives(mcpContextId);
       return archives.find(archive => 
         archive.name?.toLowerCase() === name.toLowerCase()
       ) || null;

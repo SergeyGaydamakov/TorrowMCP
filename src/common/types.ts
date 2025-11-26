@@ -55,6 +55,7 @@ export interface SearchParams {
   archiveId?: string;
   take?: number;
   skip?: number;
+  distance?: number;
 }
 
 // Результат поиска

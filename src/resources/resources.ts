@@ -8,13 +8,13 @@ export const resources: Resource[] = [
   {
     uri: `${RESOURCE_NOTE}/{torrowId}`,
     name: 'Note',
-    description: 'Get information about a specific note by its Torrow ID',
+    description: 'Get information about a specific note by its Torrow ID. Parameter: {torrowId} - the Torrow ID of the note',
     mimeType: 'application/json'
   },
   {
     uri: `${RESOURCE_ARCHIVE}/{torrowId}`,
     name: 'Archive',
-    description: 'Get information about a specific archive by its Torrow ID',
+    description: 'Get information about a specific archive by its Torrow ID. Parameter: {torrowId} - the Torrow ID of the archive',
     mimeType: 'application/json'
   },
   {

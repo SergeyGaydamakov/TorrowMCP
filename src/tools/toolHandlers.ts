@@ -39,13 +39,14 @@ export class ToolHandlers {
 
     // Check if note with this name already exists in current archive
     const currentArchiveId = contextStore.getArchiveId();
+    const currentArchiveName = contextStore.getArchiveName();
     if (!currentArchiveId) {
       throw new ContextError('Выберите существующий каталог или создайте новый, чтобы создать заметку.');
     }
 
     const exists = await this.torrowClient.noteExistsInArchive(parsed.name, currentArchiveId);
     if (exists) {
-      throw new ValidationError(`Заметка с названием "${parsed.name}" уже существует в каталоге`);
+      throw new ValidationError(`Заметка с названием "${parsed.name}" уже существует в каталоге "${currentArchiveName}"`);
     }
 
     const note = await this.torrowClient.createNote({
@@ -53,6 +54,8 @@ export class ToolHandlers {
       text: parsed.text,
       tags: parsed.tags
     }, currentArchiveId);
+    
+    await this.torrowClient.addNoteToGroup(note.id, currentArchiveId, parsed.tags);
 
     // Set as current note
     contextStore.setNoteId(note.id, parsed.name);
@@ -181,7 +184,7 @@ export class ToolHandlers {
     }
 
     // Create note first
-    const note = await this.torrowClient.createNote({
+    const note = await this.torrowClient.createArchive({
       name: parsed.name,
       text: parsed.text,
       tags: parsed.tags

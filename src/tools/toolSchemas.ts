@@ -16,7 +16,7 @@ export const DeleteNoteSchema = z.object({});
 export const SearchNotesSchema = z.object({
   phrase: z.string().optional().describe('Search phrase'),
   tags: z.array(z.string()).optional().describe('Tags to filter by'),
-  limit: z.number().optional().default(10).describe('Maximum number of results (default: 10)')
+  limit: z.coerce.number().optional().default(10).describe('Maximum number of results (default: 10)')
 });
 
 export const CreateArchiveSchema = z.object({
@@ -28,7 +28,7 @@ export const UpdateArchiveSchema = z.object({
 });
 
 export const DeleteArchiveSchema = z.object({
-  cascade: z.boolean().optional().default(false).describe('Delete all notes in archive (default: false)')
+  cascade: z.coerce.boolean().optional().default(false).describe('Delete all notes in archive (default: false)')
 });
 
 export type CreateNoteParams = z.infer<typeof CreateNoteSchema>;

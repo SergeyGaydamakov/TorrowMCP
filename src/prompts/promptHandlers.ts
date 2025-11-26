@@ -1,7 +1,7 @@
 /**
  * Prompt handlers for MCP server
  */
-import { GetPromptRequest, GetPromptResult } from '@modelcontextprotocol/sdk/types.js';
+import { GetPromptRequest, GetPromptResult, CompleteRequest, CompleteResult } from '@modelcontextprotocol/sdk/types.js';
 import { TorrowClient } from '../torrow/torrowClient.js';
 import { contextStore } from '../context/contextStore.js';
 import { ValidationError, NotFoundError } from '../common/errors.js';
@@ -24,14 +24,23 @@ export class PromptHandlers {
    */
   async selectArchive(request: GetPromptRequest): Promise<GetPromptResult> {
     const params = SelectArchiveSchema.parse(request.params.arguments || {});
+
+    if (!contextStore.getMcpContextId()) {
+      const mcpContext = await this.torrowClient.findOrCreateMCPContext();
+      if (!mcpContext) {
+        throw new ValidationError('Ошибка инициализации. Не найден контекст MCP.');
+      }
+      contextStore.setMcpContextId(mcpContext.id);
+    }
+    const mcpContextId = contextStore.getMcpContextId();
     
-    const archive = await this.torrowClient.findArchiveByName(params.archiveName);
+    const archive = await this.torrowClient.findArchiveByName(params.archiveName, mcpContextId);
     if (!archive) {
       throw new NotFoundError(`Каталог с названием "${params.archiveName}" не найден`);
     }
 
-    contextStore.setArchiveId(archive.id);
-    contextStore.setNoteId(undefined); // Clear current note
+    contextStore.setArchiveId(archive.id, archive.name);
+    contextStore.setNoteId(undefined, undefined); // Clear current note
 
     return {
       description: `Archive "${params.archiveName}" selected`,
@@ -50,9 +59,13 @@ export class PromptHandlers {
    */
   async selectNote(request: GetPromptRequest): Promise<GetPromptResult> {
     const params = SelectNoteSchema.parse(request.params.arguments || {});
-    
     if (!params.noteName && !params.noteIndex) {
       throw new ValidationError('Необходимо указать название заметки или её индекс');
+    }
+
+    const archiveId = contextStore.getArchiveId();
+    if (!archiveId) {
+      throw new ValidationError('Выберите каталог перед выбором заметки.');
     }
 
     let note;
@@ -60,7 +73,7 @@ export class PromptHandlers {
     if (params.noteName) {
       note = await this.torrowClient.findNoteByName(
         params.noteName, 
-        contextStore.getArchiveId()
+        archiveId
       );
       
       if (!note) {
@@ -69,24 +82,25 @@ export class PromptHandlers {
     } else if (params.noteIndex) {
       // Find note by index from search results
       const searchResult = await this.torrowClient.searchNotes({
-        archiveId: contextStore.getArchiveId(),
+        archiveId: archiveId,
         take: 50
       });
       
-      const notes = searchResult.items.filter(item => !item.groupInfo?.isGroup);
+      const notes = searchResult.items;
       
       if (params.noteIndex < 1 || params.noteIndex > notes.length) {
         throw new ValidationError(`Неверный индекс заметки: ${params.noteIndex}. Доступно: 1-${notes.length}`);
       }
       
       note = notes[params.noteIndex - 1];
+      if (!note) {
+        throw new NotFoundError(`Заметка с индексом ${params.noteIndex} не найдена.`);
+      }
+    } else {
+      throw new ValidationError('Необходимо указать название заметки или её индекс.');
     }
 
-    if (!note) {
-      throw new NotFoundError('Заметка не найдена');
-    }
-
-    contextStore.setNoteId(note.id);
+    contextStore.setNoteId(note.id, note.name);
 
     return {
       description: `Note "${note.name}" selected`,
@@ -106,28 +120,18 @@ export class PromptHandlers {
   async contextStatus(request: GetPromptRequest): Promise<GetPromptResult> {
     const context = contextStore.getContext();
     
-    let statusText = 'Текущий контекст:\n';
+    let statusText = '';
     
     if (context.archiveId) {
-      try {
-        const archive = await this.torrowClient.getNote(context.archiveId);
-        statusText += `• Каталог: "${archive.name}" (ID: ${context.archiveId})\n`;
-      } catch {
-        statusText += `• Каталог: ID ${context.archiveId} (недоступен)\n`;
-      }
+      statusText += `Каталог: "${contextStore.getArchiveName()}"\n`;
     } else {
-      statusText += '• Каталог: не выбран (используется каталог по умолчанию)\n';
+      statusText += 'Каталог: не выбран\n';
     }
     
     if (context.noteId) {
-      try {
-        const note = await this.torrowClient.getNote(context.noteId);
-        statusText += `• Заметка: "${note.name}" (ID: ${context.noteId})\n`;
-      } catch {
-        statusText += `• Заметка: ID ${context.noteId} (недоступна)\n`;
-      }
+      statusText += `Заметка: "${contextStore.getNoteName()}"\n`;
     } else {
-      statusText += '• Заметка: не выбрана\n';
+      statusText += 'Заметка: не выбрана\n';
     }
 
     return {
@@ -139,6 +143,114 @@ export class PromptHandlers {
           text: statusText
         }
       }]
+    };
+  }
+
+  /**
+   * Handles completion requests for prompt arguments
+   */
+  async handleCompletionRequest(request: CompleteRequest): Promise<CompleteResult> {
+    // Check if this is a prompt completion request
+    if (request.params.ref.type !== 'ref/prompt') {
+      throw new ValidationError('Completion is only supported for prompts');
+    }
+
+    const promptName = request.params.ref.name;
+    const argumentName = request.params.argument.name;
+    const argumentValue = request.params.argument.value || '';
+
+    // Handle completion for PROMPT_SELECT_ARCHIVE
+    if (promptName === PROMPT_SELECT_ARCHIVE && argumentName === 'archiveName') {
+      try {
+        // Ensure MCP context is initialized
+        if (!contextStore.getMcpContextId()) {
+          const mcpContext = await this.torrowClient.findOrCreateMCPContext();
+          if (!mcpContext) {
+            return {
+              completion: {
+                values: [],
+                total: 0,
+                hasMore: false
+              }
+            };
+          }
+          contextStore.setMcpContextId(mcpContext.id);
+        }
+
+        const mcpContextId = contextStore.getMcpContextId();
+        const archives = await this.torrowClient.getArchives(mcpContextId);
+
+        // Filter archives by the current input value (case-insensitive)
+        const filteredArchives = archives
+          .filter(archive => 
+            archive.name && 
+            archive.name.toLowerCase().includes(argumentValue.toLowerCase())
+          )
+          .map(archive => archive.name || '')
+          .filter(name => name.length > 0)
+          .slice(0, 100); // Limit to 100 items as per MCP spec
+
+        return {
+          completion: {
+            values: filteredArchives,
+            total: filteredArchives.length,
+            hasMore: false
+          }
+        };
+      } catch (error) {
+        // Return empty completion on error
+        return {
+          completion: {
+            values: [],
+            total: 0,
+            hasMore: false
+          }
+        };
+      }
+    }
+
+    if (promptName === PROMPT_SELECT_NOTE && argumentName === 'noteName') {
+      try {
+        const archiveId = contextStore.getArchiveId();
+        if (!archiveId) {
+          throw new ValidationError('Выберите каталог перед выбором заметки.');
+        }
+
+        const notes = await this.torrowClient.getPinnedNotesByParentId(archiveId, 10, 0);
+
+        // Filter archives by the current input value (case-insensitive)
+        const filteredNotes = notes
+          .filter(note => note.name && note.name.toLowerCase().includes(argumentValue.toLowerCase()))
+          .map(note => note.name || '')
+          .filter(name => name.length > 0)
+          .slice(0, 100); // Limit to 100 items as per MCP spec
+
+        return {
+          completion: {
+            values: filteredNotes,
+            total: filteredNotes.length,
+            hasMore: false
+          }
+        };
+      } catch (error) {
+        // Return empty completion on error
+        return {
+          completion: {
+            values: [],
+            total: 0,
+            hasMore: false
+          }
+        };
+      }
+    }
+
+    // No completion for other prompts/arguments
+    return {
+      completion: {
+        values: [],
+        total: 0,
+        hasMore: false
+      }
     };
   }
 

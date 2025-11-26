@@ -15,7 +15,7 @@ export const prompts: Prompt[] = [
     arguments: [
       {
         name: 'archiveName',
-        description: 'Name of the archive to select',
+        description: 'Name of the archive to select (completion suggestions available from getArchives)',
         required: true
       }
     ]
