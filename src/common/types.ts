@@ -6,7 +6,7 @@
 export interface TorrowNote {
   id: string;
   name: string;
-  text?: string;
+  data?: string;
   tags?: string[];
   noteType?: string;
   meta?: {
@@ -15,13 +15,13 @@ export interface TorrowNote {
     modifiedDate: string;
   };
   groupInfo?: {
-    isGroup: boolean;
+    rolesToSearchItems?: string[];
   };
 }
 
 export interface TorrowArchive extends TorrowNote {
   groupInfo: {
-    isGroup: true;
+    rolesToSearchItems?: string[];
   };
 }
 
@@ -86,7 +86,7 @@ export interface NoteViewResponse {
   tags?: string[];
   noteType?: string;
   groupInfo?: {
-    isGroup: boolean;
+    rolesToSearchItems?: string[];
   };
   [key: string]: unknown;
 }

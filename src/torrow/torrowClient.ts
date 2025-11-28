@@ -65,52 +65,6 @@ export class TorrowClient {
   /**
    * Creates a new note
    */
-  async createArchive(note: Partial<TorrowNote>, parentId?: string, profileId?: string): Promise<TorrowNote> {
-    const params: Record<string, string> = {};
-    if (parentId) {
-      params.parentId = parentId;
-    }
-    if (profileId) {
-      params.profileId = profileId;
-    }
-    
-    // Build request body, filtering out undefined values
-    const requestBody: Record<string, unknown> = {};
-    if (note.name !== undefined) {
-      requestBody.name = note.name;
-    }
-    if (note.text !== undefined) {
-      requestBody.data = note.text;
-    }
-    if (note.tags !== undefined) {
-      requestBody.tags = note.tags;
-    }
-    requestBody.noteType = note.noteType || 'Text';
-    requestBody.discriminator = 'NoteItem';
-    requestBody.publicityType = 'Link';
-    requestBody.files = [];
-    requestBody.imagePreviewSize = 'Small';
-    requestBody.publicityType = 'Link';
-    // requestBody.searchMode = 'NoneSearchMode';
-    // requestBody.anyoneAccess = 'Read';
-
-    requestBody.groupInfo = {
-      rolesToInclude: ["Owner", "Manager"],
-      rolesToReadItems: ["Owner", "Editor", "Manager", "Reader", "PublicReader"],
-      rolesToReadSubscribers: null,
-      rolesToSearchItems: ["Owner", "Editor", "Manager", "Reader", "PublicReader"],
-      rolesToSearchSubscribers: null,
-      rolesToUpdateItems: ["Owner", "Editor", "Manager"]
-    };
-
-    const response: AxiosResponse<TorrowNote> = await this.client.post('/api/v1/notes', requestBody, { params });
-
-    return response.data;
-  }
-
-  /**
-   * Creates a new note
-   */
   async createNote(note: Partial<TorrowNote>, parentId?: string, profileId?: string): Promise<TorrowNote> {
     const params: Record<string, string> = {};
     if (parentId) {
@@ -125,15 +79,14 @@ export class TorrowClient {
     if (note.name !== undefined) {
       requestBody.name = note.name;
     }
-    if (note.text !== undefined) {
-      requestBody.data = note.text;
+    if (note.data !== undefined) {
+      requestBody.data = note.data;
     }
     if (note.tags !== undefined) {
       requestBody.tags = note.tags;
     }
     requestBody.noteType = note.noteType || 'Text';
     requestBody.discriminator = 'NoteItem';
-    requestBody.publicityType = 'Link';
     requestBody.files = [];
     requestBody.imagePreviewSize = 'Small';
     requestBody.publicityType = 'Link';
@@ -149,22 +102,21 @@ export class TorrowClient {
    * Updates an existing note
    */
   async updateNote(torrowId: string, note: Partial<TorrowNote>): Promise<TorrowNote> {
-    // Build request body, filtering out undefined values
-    const requestBody: Record<string, unknown> = {};
+    const currentNote = await this.getNote(torrowId);
+    if (!currentNote) {
+      throw new NotFoundError(`Заметка с ID "${torrowId}" не найдена`);
+    }
     if (note.name !== undefined) {
-      requestBody.name = note.name;
+      currentNote.name = note.name;
     }
-    if (note.text !== undefined) {
-      requestBody.data = note.text;
+    if (note.data !== undefined) {
+      currentNote.data = note.data;
     }
-    if (note.tags !== undefined) {
-      requestBody.tags = note.tags;
-    }
-    if (note.noteType !== undefined) {
-      requestBody.noteType = note.noteType;
+    if (note.tags !== undefined && note.tags.length > 0) {
+      currentNote.tags = note.tags;
     }
     
-    const response: AxiosResponse<TorrowNote> = await this.client.put(`/api/v1/notes/${torrowId}`, requestBody);
+    const response: AxiosResponse<TorrowNote> = await this.client.put(`/api/v1/notes/${torrowId}`, currentNote);
 
     return response.data;
   }
@@ -196,7 +148,7 @@ export class TorrowClient {
     return {
       id: item.itemObject?.id || '',
       name: item.name || '',
-      text: item.data,
+      data: item.data,
       tags: item.tags,
       noteType: item.noteType,
       meta: item.itemObject?.meta,
@@ -240,11 +192,11 @@ export class TorrowClient {
   async setNoteAsGroup(torrowId: string): Promise<void> {
     await this.client.put(`/api/v1/notes/${torrowId}/group/set`, {
       rolesToInclude: ["Owner", "Manager"],
-      rolesToReadItems: [],
-      rolesToReadSubscribers: [],
-      rolesToSearchItems: ["Owner", "Editor", "Manager", "Reader"],
-      rolesToSearchSubscribers: [],
-      rolesToUpdateItems: []
+      rolesToReadItems: ["Owner", "Editor", "Manager", "Reader", "PublicReader"],
+      rolesToReadSubscribers: null,
+      rolesToSearchItems: ["Owner", "Editor", "Manager", "Reader", "PublicReader"],
+      rolesToSearchSubscribers: null,
+      rolesToUpdateItems: ["Owner", "Manager"]
     });
   }
 
@@ -370,8 +322,7 @@ export class TorrowClient {
       });
       
       return result.items.find(note => 
-        note.name?.toLowerCase() === name.toLowerCase() &&
-        note.groupInfo?.isGroup !== true
+        note.name?.toLowerCase() === name.toLowerCase()
       ) || null;
     } catch (error) {
       return null;

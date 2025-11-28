@@ -1,7 +1,7 @@
 /**
  * Prompt handlers for MCP server
  */
-import { GetPromptRequest, GetPromptResult } from '@modelcontextprotocol/sdk/types.js';
+import { GetPromptRequest, GetPromptResult, CompleteRequest, CompleteResult } from '@modelcontextprotocol/sdk/types.js';
 import { TorrowClient } from '../torrow/torrowClient.js';
 export declare class PromptHandlers {
     private torrowClient;
@@ -18,6 +18,10 @@ export declare class PromptHandlers {
      * Shows current context status
      */
     contextStatus(request: GetPromptRequest): Promise<GetPromptResult>;
+    /**
+     * Handles completion requests for prompt arguments
+     */
+    handleCompletionRequest(request: CompleteRequest): Promise<CompleteResult>;
     /**
      * Routes prompt requests to appropriate handlers
      */

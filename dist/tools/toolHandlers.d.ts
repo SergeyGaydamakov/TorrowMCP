@@ -35,6 +35,22 @@ export declare class ToolHandlers {
      */
     deleteArchive(request: CallToolRequest): Promise<CallToolResult>;
     /**
+     * Selects an archive by ID and makes it current
+     */
+    selectArchiveById(request: CallToolRequest): Promise<CallToolResult>;
+    /**
+     * Selects an archive by name and makes it current
+     */
+    selectArchiveByName(request: CallToolRequest): Promise<CallToolResult>;
+    /**
+     * Selects a note by ID and makes it current
+     */
+    selectNoteById(request: CallToolRequest): Promise<CallToolResult>;
+    /**
+     * Selects a note by name and makes it current
+     */
+    selectNoteByName(request: CallToolRequest): Promise<CallToolResult>;
+    /**
      * Routes tool requests to appropriate handlers
      */
     handleToolRequest(request: CallToolRequest): Promise<CallToolResult>;

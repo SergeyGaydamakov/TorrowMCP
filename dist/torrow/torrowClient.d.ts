@@ -1,12 +1,12 @@
-import { TorrowNote, SearchParams, SearchResult } from '../common/types.js';
-export declare const TORROW_API_BASE = "https://torrow.net";
+import { TorrowNote, TorrowContext, SearchParams, SearchResult } from '../common/types.js';
 /**
  * Torrow API client
  */
 export declare class TorrowClient {
     private client;
     private token;
-    constructor(token?: string);
+    private apiBase;
+    constructor(token?: string, apiBase?: string);
     /**
      * Normalizes token by adding "Bearer " prefix if missing
      */
@@ -14,7 +14,7 @@ export declare class TorrowClient {
     /**
      * Creates a new note
      */
-    createNote(note: Partial<TorrowNote>, parentId?: string): Promise<TorrowNote>;
+    createNote(note: Partial<TorrowNote>, parentId?: string, profileId?: string): Promise<TorrowNote>;
     /**
      * Updates an existing note
      */
@@ -28,9 +28,25 @@ export declare class TorrowClient {
      */
     getNote(torrowId: string): Promise<TorrowNote>;
     /**
+     * Maps NoteViewResponse to TorrowNote
+     */
+    private mapNoteViewToTorrowNote;
+    /**
+     * Gets user notes in element with specified parentId
+     */
+    getUserNotesByParentId(parentId: string, take?: number, skip?: number): Promise<TorrowNote[]>;
+    /**
+     * Gets pinned notes in element with specified parentId
+     */
+    getPinnedNotesByParentId(parentId: string, take?: number, skip?: number): Promise<TorrowNote[]>;
+    /**
      * Sets note as group (archive)
      */
     setNoteAsGroup(torrowId: string): Promise<void>;
+    /**
+     * Adds note to group (includes note in group)
+     */
+    addNoteToGroup(noteId: string, parentId: string, tags?: string[]): Promise<void>;
     /**
      * Searches notes
      */
@@ -40,20 +56,28 @@ export declare class TorrowClient {
      */
     noteExistsInArchive(name: string, archiveId?: string): Promise<boolean>;
     /**
-     * Checks if archive with name exists
-     */
-    archiveExists(name: string): Promise<boolean>;
-    /**
      * Gets archives list
      */
-    getArchives(): Promise<TorrowNote[]>;
+    getArchives(mcpContextId?: string): Promise<TorrowNote[]>;
     /**
      * Finds archive by name
      */
-    findArchiveByName(name: string): Promise<TorrowNote | null>;
+    findArchiveByName(name: string, mcpContextId?: string): Promise<TorrowNote | null>;
     /**
      * Finds note by name in archive
      */
     findNoteByName(name: string, archiveId?: string): Promise<TorrowNote | null>;
+    /**
+     * Creates a new context (Раздел)
+     */
+    createContext(name: string): Promise<TorrowContext>;
+    /**
+     * Gets list of contexts (Разделы)
+     */
+    getContexts(): Promise<TorrowContext[]>;
+    /**
+     * Поиск или создание служебного раздела "MCP"
+     */
+    findOrCreateMCPContext(): Promise<TorrowContext>;
 }
 //# sourceMappingURL=torrowClient.d.ts.map

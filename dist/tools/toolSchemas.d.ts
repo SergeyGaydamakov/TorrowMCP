@@ -51,6 +51,34 @@ export declare const DeleteArchiveSchema: z.ZodObject<{
 }, {
     cascade?: boolean | undefined;
 }>;
+export declare const SelectArchiveByIdSchema: z.ZodObject<{
+    archiveId: z.ZodString;
+}, "strip", z.ZodTypeAny, {
+    archiveId: string;
+}, {
+    archiveId: string;
+}>;
+export declare const SelectArchiveByNameSchema: z.ZodObject<{
+    archiveName: z.ZodString;
+}, "strip", z.ZodTypeAny, {
+    archiveName: string;
+}, {
+    archiveName: string;
+}>;
+export declare const SelectNoteByIdSchema: z.ZodObject<{
+    noteId: z.ZodString;
+}, "strip", z.ZodTypeAny, {
+    noteId: string;
+}, {
+    noteId: string;
+}>;
+export declare const SelectNoteByNameSchema: z.ZodObject<{
+    noteName: z.ZodString;
+}, "strip", z.ZodTypeAny, {
+    noteName: string;
+}, {
+    noteName: string;
+}>;
 export type CreateNoteParams = z.infer<typeof CreateNoteSchema>;
 export type UpdateNoteParams = z.infer<typeof UpdateNoteSchema>;
 export type DeleteNoteParams = z.infer<typeof DeleteNoteSchema>;
@@ -58,4 +86,8 @@ export type SearchNotesParams = z.infer<typeof SearchNotesSchema>;
 export type CreateArchiveParams = z.infer<typeof CreateArchiveSchema>;
 export type UpdateArchiveParams = z.infer<typeof UpdateArchiveSchema>;
 export type DeleteArchiveParams = z.infer<typeof DeleteArchiveSchema>;
+export type SelectArchiveByIdParams = z.infer<typeof SelectArchiveByIdSchema>;
+export type SelectArchiveByNameParams = z.infer<typeof SelectArchiveByNameSchema>;
+export type SelectNoteByIdParams = z.infer<typeof SelectNoteByIdSchema>;
+export type SelectNoteByNameParams = z.infer<typeof SelectNoteByNameSchema>;
 //# sourceMappingURL=toolSchemas.d.ts.map

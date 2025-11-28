@@ -2,22 +2,25 @@
  * Torrow API client wrapper
  */
 import axios from 'axios';
-import { TorrowApiError, AuthenticationError } from '../common/errors.js';
+import { TorrowApiError, AuthenticationError, ContextError } from '../common/errors.js';
+import { NotFoundError } from '../common/errors.js';
 // Torrow API base URL
-export const TORROW_API_BASE = 'https://torrow.net';
+const DEFAULT_TORROW_API_BASE = 'https://torrow.net';
 /**
  * Torrow API client
  */
 export class TorrowClient {
     client;
     token;
-    constructor(token) {
-        this.token = this.normalizeToken(token || process.env.TORROW_TOKEN || '');
+    apiBase;
+    constructor(token, apiBase) {
+        this.apiBase = apiBase || DEFAULT_TORROW_API_BASE;
+        this.token = this.normalizeToken(token || '');
         if (!this.token) {
             throw new AuthenticationError('TORROW_TOKEN is required');
         }
         this.client = axios.create({
-            baseURL: TORROW_API_BASE,
+            baseURL: this.apiBase,
             headers: {
                 'Authorization': this.token,
                 'Content-Type': 'application/json'
@@ -46,29 +49,53 @@ export class TorrowClient {
     /**
      * Creates a new note
      */
-    async createNote(note, parentId) {
+    async createNote(note, parentId, profileId) {
         const params = {};
         if (parentId) {
             params.parentId = parentId;
         }
-        const response = await this.client.post('/api/v1/notes', {
-            name: note.name,
-            data: note.text,
-            tags: note.tags,
-            noteType: 'Text'
-        }, { params });
+        if (profileId) {
+            params.profileId = profileId;
+        }
+        // Build request body, filtering out undefined values
+        const requestBody = {};
+        if (note.name !== undefined) {
+            requestBody.name = note.name;
+        }
+        if (note.data !== undefined) {
+            requestBody.data = note.data;
+        }
+        if (note.tags !== undefined) {
+            requestBody.tags = note.tags;
+        }
+        requestBody.noteType = note.noteType || 'Text';
+        requestBody.discriminator = 'NoteItem';
+        requestBody.files = [];
+        requestBody.imagePreviewSize = 'Small';
+        requestBody.publicityType = 'Link';
+        // requestBody.searchMode = 'NoneSearchMode';
+        // requestBody.anyoneAccess = 'Read';
+        const response = await this.client.post('/api/v1/notes', requestBody, { params });
         return response.data;
     }
     /**
      * Updates an existing note
      */
     async updateNote(torrowId, note) {
-        const response = await this.client.put(`/api/v1/notes/${torrowId}`, {
-            name: note.name,
-            data: note.text,
-            tags: note.tags,
-            noteType: 'Text'
-        });
+        const currentNote = await this.getNote(torrowId);
+        if (!currentNote) {
+            throw new NotFoundError(`Заметка с ID "${torrowId}" не найдена`);
+        }
+        if (note.name !== undefined) {
+            currentNote.name = note.name;
+        }
+        if (note.data !== undefined) {
+            currentNote.data = note.data;
+        }
+        if (note.tags !== undefined && note.tags.length > 0) {
+            currentNote.tags = note.tags;
+        }
+        const response = await this.client.put(`/api/v1/notes/${torrowId}`, currentNote);
         return response.data;
     }
     /**
@@ -89,17 +116,70 @@ export class TorrowClient {
         return response.data;
     }
     /**
+     * Maps NoteViewResponse to TorrowNote
+     */
+    mapNoteViewToTorrowNote(item) {
+        return {
+            id: item.itemObject?.id || '',
+            name: item.name || '',
+            data: item.data,
+            tags: item.tags,
+            noteType: item.noteType,
+            meta: item.itemObject?.meta,
+            groupInfo: item.groupInfo
+        };
+    }
+    /**
+     * Gets user notes in element with specified parentId
+     */
+    async getUserNotesByParentId(parentId, take, skip) {
+        const params = {
+            take: take?.toString() || '10',
+            skip: skip?.toString() || '0'
+        };
+        const response = await this.client.get(`/api/v1/notes/${parentId}/views/user`, { params });
+        const items = response.data || [];
+        return items.map(item => this.mapNoteViewToTorrowNote(item));
+    }
+    /**
+     * Gets pinned notes in element with specified parentId
+     */
+    async getPinnedNotesByParentId(parentId, take, skip) {
+        const params = {
+            take: take?.toString() || '10',
+            skip: skip?.toString() || '0'
+        };
+        const response = await this.client.get(`/api/v1/notes/${parentId}/views/pinned`, { params });
+        const items = response.data || [];
+        return items.map(item => this.mapNoteViewToTorrowNote(item));
+    }
+    /**
      * Sets note as group (archive)
      */
     async setNoteAsGroup(torrowId) {
         await this.client.put(`/api/v1/notes/${torrowId}/group/set`, {
             rolesToInclude: ["Owner", "Manager"],
-            rolesToReadItems: [],
-            rolesToReadSubscribers: [],
-            rolesToSearchItems: ["Owner", "Editor", "Manager", "Reader"],
-            rolesToSearchSubscribers: [],
-            rolesToUpdateItems: []
+            rolesToReadItems: ["Owner", "Editor", "Manager", "Reader", "PublicReader"],
+            rolesToReadSubscribers: null,
+            rolesToSearchItems: ["Owner", "Editor", "Manager", "Reader", "PublicReader"],
+            rolesToSearchSubscribers: null,
+            rolesToUpdateItems: ["Owner", "Manager"]
         });
+    }
+    /**
+     * Adds note to group (includes note in group)
+     */
+    async addNoteToGroup(noteId, parentId, tags) {
+        const params = {
+            parentId: parentId
+        };
+        // Second call: update groups
+        const updateGroupsBody = [{
+                groupId: parentId,
+                include: true,
+                tags: tags || []
+            }];
+        await this.client.put(`/api/v1/notes/${noteId}/updategroups`, updateGroupsBody, { params });
     }
     /**
      * Searches notes
@@ -118,14 +198,21 @@ export class TorrowClient {
         if (params.skip !== undefined) {
             queryParams.skip = params.skip.toString();
         }
+        else {
+            queryParams.skip = '0';
+        }
+        if (params.distance) {
+            queryParams.distance = params.distance.toString();
+        }
         // If archiveId is provided, search within that archive
         if (params.archiveId) {
             queryParams.groupIds = params.archiveId;
         }
         const response = await this.client.get('/api/v1/search/notes', { params: queryParams });
+        const items = response.data || [];
         return {
-            items: response.data.items || [],
-            totalCount: response.data.totalCount || 0
+            items: items.map(item => this.mapNoteViewToTorrowNote(item)),
+            totalCount: items.length
         };
     }
     /**
@@ -136,7 +223,8 @@ export class TorrowClient {
             const result = await this.searchNotes({
                 text: name,
                 archiveId,
-                take: 1
+                take: 20, // Так поиск по подстроке, то нужно взять больше заметок, чтобы найти нужную
+                distance: undefined
             });
             return result.items.some(note => note.name?.toLowerCase() === name.toLowerCase());
         }
@@ -145,28 +233,15 @@ export class TorrowClient {
         }
     }
     /**
-     * Checks if archive with name exists
-     */
-    async archiveExists(name) {
-        try {
-            const result = await this.searchNotes({
-                text: name,
-                take: 50 // Search more items to find archives
-            });
-            return result.items.some(note => note.name?.toLowerCase() === name.toLowerCase() &&
-                note.groupInfo?.isGroup === true);
-        }
-        catch (error) {
-            return false;
-        }
-    }
-    /**
      * Gets archives list
      */
-    async getArchives() {
+    async getArchives(mcpContextId) {
+        if (!mcpContextId) {
+            throw new ContextError('В методе getArchives не указан ID служебного раздела "MCP"');
+        }
         try {
-            const result = await this.searchNotes({ take: 50 });
-            return result.items.filter(note => note.groupInfo?.isGroup === true);
+            const result = await this.getUserNotesByParentId(mcpContextId, 20, 0);
+            return result;
         }
         catch (error) {
             throw new TorrowApiError(`Failed to get archives: ${error}`);
@@ -175,9 +250,12 @@ export class TorrowClient {
     /**
      * Finds archive by name
      */
-    async findArchiveByName(name) {
+    async findArchiveByName(name, mcpContextId) {
+        if (!mcpContextId) {
+            throw new ContextError('В методе findArchiveByName не указан ID служебного раздела "MCP"');
+        }
         try {
-            const archives = await this.getArchives();
+            const archives = await this.getArchives(mcpContextId);
             return archives.find(archive => archive.name?.toLowerCase() === name.toLowerCase()) || null;
         }
         catch (error) {
@@ -194,12 +272,48 @@ export class TorrowClient {
                 archiveId,
                 take: 50
             });
-            return result.items.find(note => note.name?.toLowerCase() === name.toLowerCase() &&
-                note.groupInfo?.isGroup !== true) || null;
+            return result.items.find(note => note.name?.toLowerCase() === name.toLowerCase()) || null;
         }
         catch (error) {
             return null;
         }
+    }
+    /**
+     * Creates a new context (Раздел)
+     */
+    async createContext(name) {
+        const requestBody = {};
+        requestBody.name = name;
+        requestBody.discriminator = 'ContextItem';
+        // requestBody.profileId = profileId;
+        const response = await this.client.post('/api/v1/contexts', requestBody);
+        return response.data;
+    }
+    /**
+     * Gets list of contexts (Разделы)
+     */
+    async getContexts() {
+        const params = {
+            take: '20',
+            skip: '0',
+            lmfrom: '1970-01-01T00:00:00.000Z',
+            includeDeleted: 'false',
+            sort: 'OrderDesc'
+        };
+        const response = await this.client.get('/api/v1/contexts/personallist', { params });
+        return response.data || [];
+    }
+    /**
+     * Поиск или создание служебного раздела "MCP"
+     */
+    async findOrCreateMCPContext() {
+        const contexts = await this.getContexts();
+        const mcpContext = contexts.find(context => context.name === 'MCP');
+        if (mcpContext) {
+            return mcpContext;
+        }
+        const newContext = await this.createContext('MCP');
+        return newContext;
     }
 }
 //# sourceMappingURL=torrowClient.js.map

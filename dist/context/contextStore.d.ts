@@ -12,21 +12,31 @@ export declare class ContextStore {
      */
     getContext(): Context;
     /**
+       * Sets current archive ID
+       */
+    setMcpContextId(contextId: string | undefined): void;
+    /**
+     * Gets current archive ID
+     */
+    getMcpContextId(): string | undefined;
+    /**
      * Sets current archive ID
      */
-    setArchiveId(archiveId: string | undefined): void;
+    setArchiveId(archiveId: string | undefined, archiveName: string | undefined): void;
     /**
      * Gets current archive ID
      */
     getArchiveId(): string | undefined;
+    getArchiveName(): string | undefined;
     /**
      * Sets current note ID
      */
-    setNoteId(noteId: string | undefined): void;
+    setNoteId(noteId: string | undefined, noteName: string | undefined): void;
     /**
      * Gets current note ID
      */
     getNoteId(): string | undefined;
+    getNoteName(): string | undefined;
     /**
      * Clears all context
      */

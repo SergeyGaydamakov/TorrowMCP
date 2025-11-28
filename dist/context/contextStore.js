@@ -10,10 +10,24 @@ export class ContextStore {
         return { ...this.context };
     }
     /**
+       * Sets current archive ID
+       */
+    setMcpContextId(contextId) {
+        this.context.contextId = contextId;
+    }
+    /**
+     * Gets current archive ID
+     */
+    getMcpContextId() {
+        return this.context.contextId;
+    }
+    /**
      * Sets current archive ID
      */
-    setArchiveId(archiveId) {
+    setArchiveId(archiveId, archiveName) {
         this.context.archiveId = archiveId;
+        this.context.archiveName = archiveName;
+        this.setNoteId(undefined, undefined);
     }
     /**
      * Gets current archive ID
@@ -21,17 +35,24 @@ export class ContextStore {
     getArchiveId() {
         return this.context.archiveId;
     }
+    getArchiveName() {
+        return this.context.archiveName;
+    }
     /**
      * Sets current note ID
      */
-    setNoteId(noteId) {
+    setNoteId(noteId, noteName) {
         this.context.noteId = noteId;
+        this.context.noteName = noteName;
     }
     /**
      * Gets current note ID
      */
     getNoteId() {
         return this.context.noteId;
+    }
+    getNoteName() {
+        return this.context.noteName;
     }
     /**
      * Clears all context

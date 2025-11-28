@@ -7,7 +7,7 @@ export const SelectArchiveSchema = z.object({
 });
 export const SelectNoteSchema = z.object({
     noteName: z.string().optional().describe('Name of the note to select'),
-    noteIndex: z.number().optional().describe('Index of the note from search results (1-based)')
+    noteIndex: z.coerce.number().optional().describe('Index of the note from search results (1-based)')
 });
 export const ContextStatusSchema = z.object({});
 //# sourceMappingURL=promptSchemas.js.map

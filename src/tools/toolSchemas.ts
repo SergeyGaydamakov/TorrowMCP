@@ -31,6 +31,22 @@ export const DeleteArchiveSchema = z.object({
   cascade: z.coerce.boolean().optional().default(false).describe('Delete all notes in archive (default: false)')
 });
 
+export const SelectArchiveByIdSchema = z.object({
+  archiveId: z.string().describe('ID of the archive to select')
+});
+
+export const SelectArchiveByNameSchema = z.object({
+  archiveName: z.string().describe('Name of the archive to select')
+});
+
+export const SelectNoteByIdSchema = z.object({
+  noteId: z.string().describe('ID of the note to select')
+});
+
+export const SelectNoteByNameSchema = z.object({
+  noteName: z.string().describe('Name of the note to select')
+});
+
 export type CreateNoteParams = z.infer<typeof CreateNoteSchema>;
 export type UpdateNoteParams = z.infer<typeof UpdateNoteSchema>;
 export type DeleteNoteParams = z.infer<typeof DeleteNoteSchema>;
@@ -38,3 +54,7 @@ export type SearchNotesParams = z.infer<typeof SearchNotesSchema>;
 export type CreateArchiveParams = z.infer<typeof CreateArchiveSchema>;
 export type UpdateArchiveParams = z.infer<typeof UpdateArchiveSchema>;
 export type DeleteArchiveParams = z.infer<typeof DeleteArchiveSchema>;
+export type SelectArchiveByIdParams = z.infer<typeof SelectArchiveByIdSchema>;
+export type SelectArchiveByNameParams = z.infer<typeof SelectArchiveByNameSchema>;
+export type SelectNoteByIdParams = z.infer<typeof SelectNoteByIdSchema>;
+export type SelectNoteByNameParams = z.infer<typeof SelectNoteByNameSchema>;

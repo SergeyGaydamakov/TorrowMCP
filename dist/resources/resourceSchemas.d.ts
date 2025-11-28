@@ -3,21 +3,32 @@
  */
 import { z } from 'zod';
 export declare const NoteResourceSchema: z.ZodObject<{
-    torrowId: z.ZodString;
+    noteId: z.ZodString;
 }, "strip", z.ZodTypeAny, {
-    torrowId: string;
+    noteId: string;
 }, {
-    torrowId: string;
+    noteId: string;
 }>;
 export declare const ArchiveResourceSchema: z.ZodObject<{
-    torrowId: z.ZodString;
+    archiveId: z.ZodString;
 }, "strip", z.ZodTypeAny, {
-    torrowId: string;
+    archiveId: string;
 }, {
-    torrowId: string;
+    archiveId: string;
 }>;
 export declare const ArchivesListResourceSchema: z.ZodObject<{}, "strip", z.ZodTypeAny, {}, {}>;
+export declare const ArchiveNoteResourceSchema: z.ZodObject<{
+    archiveName: z.ZodString;
+    noteName: z.ZodString;
+}, "strip", z.ZodTypeAny, {
+    archiveName: string;
+    noteName: string;
+}, {
+    archiveName: string;
+    noteName: string;
+}>;
 export type NoteResourceParams = z.infer<typeof NoteResourceSchema>;
 export type ArchiveResourceParams = z.infer<typeof ArchiveResourceSchema>;
 export type ArchivesListResourceParams = z.infer<typeof ArchivesListResourceSchema>;
+export type ArchiveNoteResourceParams = z.infer<typeof ArchiveNoteResourceSchema>;
 //# sourceMappingURL=resourceSchemas.d.ts.map

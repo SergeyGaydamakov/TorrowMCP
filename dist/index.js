@@ -5,7 +5,7 @@
 import 'dotenv/config';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { CallToolRequestSchema, ListResourcesRequestSchema, ListToolsRequestSchema, ReadResourceRequestSchema, ListPromptsRequestSchema, GetPromptRequestSchema } from '@modelcontextprotocol/sdk/types.js';
+import { CallToolRequestSchema, ListResourcesRequestSchema, ListToolsRequestSchema, ReadResourceRequestSchema, ListPromptsRequestSchema, GetPromptRequestSchema, CompleteRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { TorrowClient } from './torrow/torrowClient.js';
 import { ResourceHandlers } from './resources/resourceHandlers.js';
 import { ToolHandlers } from './tools/toolHandlers.js';
@@ -30,16 +30,30 @@ class TorrowMcpServer {
             capabilities: {
                 resources: {},
                 tools: {},
-                prompts: {}
+                prompts: {},
+                completions: {}
             }
         });
         // Initialize Torrow client
-        this.torrowClient = new TorrowClient();
+        const token = this.getToken();
+        const apiBase = this.getApiBase();
+        this.torrowClient = new TorrowClient(token, apiBase);
         // Initialize handlers
         this.resourceHandlers = new ResourceHandlers(this.torrowClient);
         this.toolHandlers = new ToolHandlers(this.torrowClient);
         this.promptHandlers = new PromptHandlers(this.torrowClient);
         this.setupHandlers();
+    }
+    // Получение значения аргумента из командной строки
+    getArgsValue(name) {
+        return process.argv.slice(2).filter(arg => arg.startsWith(`${name}=`)).map(arg => arg.split('=')[1]);
+    }
+    // Получение токена из аргументов или переменных окружения
+    getToken() {
+        return process.env.TORROW_TOKEN || this.getArgsValue('TORROW_TOKEN')[0] || '';
+    }
+    getApiBase() {
+        return process.env.TORROW_API_BASE || this.getArgsValue('TORROW_API_BASE')[0] || '';
     }
     /**
      * Sets up MCP request handlers
@@ -66,6 +80,10 @@ class TorrowMcpServer {
         this.server.setRequestHandler(GetPromptRequestSchema, async (request) => {
             return this.promptHandlers.handlePromptRequest(request);
         });
+        // Completions
+        this.server.setRequestHandler(CompleteRequestSchema, async (request) => {
+            return this.promptHandlers.handleCompletionRequest(request);
+        });
     }
     /**
      * Starts the MCP server
@@ -90,7 +108,7 @@ async function main() {
     }
 }
 // Start the server
-if (import.meta.url === `file://${process.argv[1]}`) {
-    main().catch(console.error);
-}
+// if (import.meta.url === `file://${process.argv[1]}`) {
+main().catch(console.error);
+// }
 //# sourceMappingURL=index.js.map

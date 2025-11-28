@@ -36,6 +36,7 @@ export class ContextStore {
   setArchiveId(archiveId: string | undefined, archiveName: string | undefined): void {
     this.context.archiveId = archiveId;
     this.context.archiveName = archiveName;
+    this.setNoteId(undefined, undefined);
   }
 
   /**

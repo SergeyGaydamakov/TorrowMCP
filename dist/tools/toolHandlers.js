@@ -1,8 +1,8 @@
 import { contextStore } from '../context/contextStore.js';
 import { parsePhrase, validateName } from '../util/phrase.js';
-import { ValidationError, ContextError } from '../common/errors.js';
-import { TOOL_CREATE_NOTE, TOOL_UPDATE_NOTE, TOOL_DELETE_NOTE, TOOL_SEARCH_NOTES, TOOL_CREATE_ARCHIVE, TOOL_UPDATE_ARCHIVE, TOOL_DELETE_ARCHIVE } from './toolConstants.js';
-import { CreateNoteSchema, UpdateNoteSchema, SearchNotesSchema, CreateArchiveSchema, UpdateArchiveSchema, DeleteArchiveSchema } from './toolSchemas.js';
+import { ValidationError, ContextError, NotFoundError } from '../common/errors.js';
+import { TOOL_CREATE_NOTE, TOOL_UPDATE_NOTE, TOOL_DELETE_NOTE, TOOL_SEARCH_NOTES, TOOL_CREATE_ARCHIVE, TOOL_UPDATE_ARCHIVE, TOOL_DELETE_ARCHIVE, TOOL_SELECT_ARCHIVE_BY_ID, TOOL_SELECT_ARCHIVE_BY_NAME, TOOL_SELECT_NOTE_BY_ID, TOOL_SELECT_NOTE_BY_NAME } from './toolConstants.js';
+import { CreateNoteSchema, UpdateNoteSchema, SearchNotesSchema, CreateArchiveSchema, UpdateArchiveSchema, DeleteArchiveSchema, SelectArchiveByIdSchema, SelectArchiveByNameSchema, SelectNoteByIdSchema, SelectNoteByNameSchema } from './toolSchemas.js';
 export class ToolHandlers {
     torrowClient;
     constructor(torrowClient) {
@@ -12,24 +12,27 @@ export class ToolHandlers {
      * Creates a new note
      */
     async createNote(request) {
-        const params = CreateNoteSchema.parse(request.params);
+        const params = CreateNoteSchema.parse(request.params.arguments);
         const parsed = parsePhrase(params.phrase);
-        validateName(parsed.name);
+        validateName(request.params.name);
         // Check if note with this name already exists in current archive
         const currentArchiveId = contextStore.getArchiveId();
-        if (currentArchiveId) {
-            const exists = await this.torrowClient.noteExistsInArchive(parsed.name, currentArchiveId);
-            if (exists) {
-                throw new ValidationError(`Заметка с названием "${parsed.name}" уже существует в каталоге`);
-            }
+        const currentArchiveName = contextStore.getArchiveName();
+        if (!currentArchiveId) {
+            throw new ContextError('Выберите существующий каталог или создайте новый, чтобы создать заметку.');
+        }
+        const exists = await this.torrowClient.noteExistsInArchive(parsed.name, currentArchiveId);
+        if (exists) {
+            throw new ValidationError(`Заметка с названием "${parsed.name}" уже существует в каталоге "${currentArchiveName}"`);
         }
         const note = await this.torrowClient.createNote({
             name: parsed.name,
-            text: parsed.text,
+            data: parsed.text,
             tags: parsed.tags
         }, currentArchiveId);
+        await this.torrowClient.addNoteToGroup(note.id, currentArchiveId, parsed.tags);
         // Set as current note
-        contextStore.setNoteId(note.id);
+        contextStore.setNoteId(note.id, parsed.name);
         return {
             content: [{
                     type: 'text',
@@ -41,22 +44,33 @@ export class ToolHandlers {
      * Updates current note
      */
     async updateNote(request) {
-        const params = UpdateNoteSchema.parse(request.params);
+        const params = UpdateNoteSchema.parse(request.params.arguments);
         const parsed = parsePhrase(params.phrase);
         validateName(parsed.name);
         const currentNoteId = contextStore.getNoteId();
+        const currentNoteName = contextStore.getNoteName();
         if (!currentNoteId) {
-            throw new ContextError('Нет текущей заметки для изменения');
+            throw new ContextError('Укажите заметку, которую нужно изменить.');
         }
-        const updatedNote = await this.torrowClient.updateNote(currentNoteId, {
-            name: parsed.name,
-            text: parsed.text,
-            tags: parsed.tags
-        });
+        try {
+            const updatedNote = await this.torrowClient.updateNote(currentNoteId, {
+                name: parsed.name,
+                data: parsed.text,
+                tags: parsed.tags
+            });
+        }
+        catch (error) {
+            return {
+                content: [{
+                        type: 'text',
+                        text: `Не удалось обновить заметку "${parsed.name}": ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`
+                    }]
+            };
+        }
         return {
             content: [{
                     type: 'text',
-                    text: `Заметка "${parsed.name}" успешно обновлена`
+                    text: `Заметка "${currentNoteName}" успешно обновлена. ID: ${currentNoteId}`
                 }]
         };
     }
@@ -65,18 +79,27 @@ export class ToolHandlers {
      */
     async deleteNote(request) {
         const currentNoteId = contextStore.getNoteId();
+        const currentNoteName = contextStore.getNoteName();
         if (!currentNoteId) {
-            throw new ContextError('Нет текущей заметки для удаления');
+            throw new ContextError('Укажите заметку, которую нужно удалить.');
         }
-        // Get note info before deletion
-        const note = await this.torrowClient.getNote(currentNoteId);
-        await this.torrowClient.deleteNote(currentNoteId);
+        try {
+            await this.torrowClient.deleteNote(currentNoteId);
+        }
+        catch (error) {
+            return {
+                content: [{
+                        type: 'text',
+                        text: `Не удалось удалить заметку "${currentNoteId}": ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`
+                    }]
+            };
+        }
         // Clear current note
-        contextStore.setNoteId(undefined);
+        contextStore.setNoteId(undefined, undefined);
         return {
             content: [{
                     type: 'text',
-                    text: `Заметка "${note.name}" успешно удалена`
+                    text: `Заметка "${currentNoteName}" успешно удалена. ID: ${currentNoteId}`
                 }]
         };
     }
@@ -84,7 +107,7 @@ export class ToolHandlers {
      * Searches notes in current archive
      */
     async searchNotes(request) {
-        const params = SearchNotesSchema.parse(request.params);
+        const params = SearchNotesSchema.parse(request.params.arguments);
         const result = await this.torrowClient.searchNotes({
             text: params.phrase,
             tags: params.tags,
@@ -95,13 +118,12 @@ export class ToolHandlers {
             return {
                 content: [{
                         type: 'text',
-                        text: 'Заметки не найдены'
+                        text: `В архиве "${contextStore.getArchiveName()}" для указанных параметров заметок не найдено.`
                     }]
             };
         }
         const notesList = result.items
-            .filter(note => !note.groupInfo?.isGroup) // Exclude archives
-            .map((note, index) => `${index + 1}. ${note.name}${note.tags?.length ? ' #' + note.tags.join(' #') : ''}`)
+            .map((note, index) => `${index + 1}. ID: ${note.id} - ${note.name}${note.tags?.length ? ' #' + note.tags.join(' #') : ''}`)
             .join('\n');
         return {
             content: [{
@@ -114,33 +136,38 @@ export class ToolHandlers {
      * Creates a new archive
      */
     async createArchive(request) {
-        const params = CreateArchiveSchema.parse(request.params);
+        const params = CreateArchiveSchema.parse(request.params.arguments);
         const parsed = parsePhrase(params.phrase);
         validateName(parsed.name);
+        if (!contextStore.getMcpContextId()) {
+            // Find or create MCP context
+            const mcpContext = await this.torrowClient.findOrCreateMCPContext();
+            contextStore.setMcpContextId(mcpContext.id);
+        }
         // Check archive limit (max 10)
-        const existingArchives = await this.torrowClient.getArchives();
+        const existingArchives = await this.torrowClient.getArchives(contextStore.getMcpContextId());
         if (existingArchives.length >= 10) {
             throw new ValidationError('Превышен лимит каталогов (максимум 10)');
         }
         // Check if archive with this name already exists
-        const exists = await this.torrowClient.archiveExists(parsed.name);
+        const exists = existingArchives.find(archive => archive.name.toLowerCase() === parsed.name.toLowerCase());
         if (exists) {
             throw new ValidationError(`Каталог с названием "${parsed.name}" уже существует`);
         }
         // Create note first
-        const note = await this.torrowClient.createNote({
+        const archive = await this.torrowClient.createNote({
             name: parsed.name,
-            text: parsed.text,
+            data: parsed.text,
             tags: parsed.tags
-        });
+        }, contextStore.getMcpContextId());
         // Convert to archive
-        await this.torrowClient.setNoteAsGroup(note.id);
+        await this.torrowClient.setNoteAsGroup(archive.id);
         // Set as current archive
-        contextStore.setArchiveId(note.id);
+        contextStore.setArchiveId(archive.id, parsed.name);
         return {
             content: [{
                     type: 'text',
-                    text: `Каталог "${parsed.name}" успешно создан. ID: ${note.id}`
+                    text: `Каталог "${parsed.name}" успешно создан. ID: ${archive.id}`
                 }]
         };
     }
@@ -148,22 +175,33 @@ export class ToolHandlers {
      * Updates current archive
      */
     async updateArchive(request) {
-        const params = UpdateArchiveSchema.parse(request.params);
+        const params = UpdateArchiveSchema.parse(request.params.arguments);
         const parsed = parsePhrase(params.phrase);
         validateName(parsed.name);
         const currentArchiveId = contextStore.getArchiveId();
+        const currentArchiveName = contextStore.getArchiveName();
         if (!currentArchiveId) {
-            throw new ContextError('Нет текущего каталога для изменения');
+            throw new ContextError('Укажите каталог, который нужно изменить.');
         }
-        const updatedArchive = await this.torrowClient.updateNote(currentArchiveId, {
-            name: parsed.name,
-            text: parsed.text,
-            tags: parsed.tags
-        });
+        try {
+            const updatedArchive = await this.torrowClient.updateNote(currentArchiveId, {
+                name: parsed.name,
+                data: parsed.text,
+                tags: parsed.tags
+            });
+        }
+        catch (error) {
+            return {
+                content: [{
+                        type: 'text',
+                        text: `Не удалось обновить каталог "${currentArchiveName}": ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`
+                    }]
+            };
+        }
         return {
             content: [{
                     type: 'text',
-                    text: `Каталог "${parsed.name}" успешно обновлен`
+                    text: `Каталог "${currentArchiveName}" успешно обновлен. ID: ${currentArchiveId}`
                 }]
         };
     }
@@ -171,22 +209,136 @@ export class ToolHandlers {
      * Deletes current archive
      */
     async deleteArchive(request) {
-        const params = DeleteArchiveSchema.parse(request.params);
+        const params = DeleteArchiveSchema.parse(request.params.arguments);
         const currentArchiveId = contextStore.getArchiveId();
+        const currentArchiveName = contextStore.getArchiveName();
         if (!currentArchiveId) {
-            throw new ContextError('Нет текущего каталога для удаления');
+            throw new ContextError('Укажите каталог, который нужно удалить.');
         }
-        // Get archive info before deletion
-        const archive = await this.torrowClient.getNote(currentArchiveId);
         await this.torrowClient.deleteNote(currentArchiveId, params.cascade);
         // Clear current archive
-        contextStore.setArchiveId(undefined);
+        contextStore.setArchiveId(undefined, undefined);
         return {
             content: [{
                     type: 'text',
-                    text: `Каталог "${archive.name}" успешно удален${params.cascade ? ' со всеми заметками' : ''}`
+                    text: `Каталог "${currentArchiveName}" успешно удален ${params.cascade ? ' со всеми заметками' : ''}`
                 }]
         };
+    }
+    /**
+     * Selects an archive by ID and makes it current
+     */
+    async selectArchiveById(request) {
+        const params = SelectArchiveByIdSchema.parse(request.params.arguments);
+        try {
+            const archive = await this.torrowClient.getNote(params.archiveId);
+            const isArchive = archive.groupInfo?.rolesToSearchItems?.includes("PublicReader");
+            if (!isArchive) {
+                throw new NotFoundError(`Указанный ID "${params.archiveId}" не является каталогом`);
+            }
+            contextStore.setArchiveId(archive.id, archive.name);
+            return {
+                content: [{
+                        type: 'text',
+                        text: `Каталог "${archive.name}" успешно выбран. ID: ${archive.id}`
+                    }]
+            };
+        }
+        catch (error) {
+            if (error instanceof NotFoundError) {
+                throw error;
+            }
+            throw new NotFoundError(`Каталог с ID "${params.archiveId}" не найден: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
+        }
+    }
+    /**
+     * Selects an archive by name and makes it current
+     */
+    async selectArchiveByName(request) {
+        const params = SelectArchiveByNameSchema.parse(request.params.arguments);
+        const mcpContextId = contextStore.getMcpContextId();
+        if (!mcpContextId) {
+            // Find or create MCP context
+            const mcpContext = await this.torrowClient.findOrCreateMCPContext();
+            contextStore.setMcpContextId(mcpContext.id);
+        }
+        try {
+            const archive = await this.torrowClient.findArchiveByName(params.archiveName, contextStore.getMcpContextId());
+            if (!archive) {
+                throw new NotFoundError(`Каталог с названием "${params.archiveName}" не найден`);
+            }
+            contextStore.setArchiveId(archive.id, archive.name);
+            return {
+                content: [{
+                        type: 'text',
+                        text: `Каталог "${archive.name}" успешно выбран. ID: ${archive.id}`
+                    }]
+            };
+        }
+        catch (error) {
+            if (error instanceof NotFoundError) {
+                throw error;
+            }
+            throw new NotFoundError(`Каталог с названием "${params.archiveName}" не найден: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
+        }
+    }
+    /**
+     * Selects a note by ID and makes it current
+     */
+    async selectNoteById(request) {
+        const params = SelectNoteByIdSchema.parse(request.params.arguments);
+        try {
+            const note = await this.torrowClient.getNote(params.noteId);
+            // Check that it's not an archive
+            const isArchive = note.groupInfo?.rolesToSearchItems?.includes("PublicReader");
+            if (isArchive) {
+                throw new NotFoundError(`Указанный ID "${params.noteId}" является каталогом, а не заметкой`);
+            }
+            // Set as current note
+            contextStore.setNoteId(note.id, note.name);
+            return {
+                content: [{
+                        type: 'text',
+                        text: `Заметка "${note.name}" успешно выбрана. ID: ${note.id}`
+                    }]
+            };
+        }
+        catch (error) {
+            if (error instanceof NotFoundError) {
+                throw error;
+            }
+            throw new NotFoundError(`Заметка с ID "${params.noteId}" не найдена: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
+        }
+    }
+    /**
+     * Selects a note by name and makes it current
+     */
+    async selectNoteByName(request) {
+        const params = SelectNoteByNameSchema.parse(request.params.arguments);
+        const archiveId = contextStore.getArchiveId();
+        if (!archiveId) {
+            throw new ContextError('Выберите каталог перед выбором заметки.');
+        }
+        try {
+            const note = await this.torrowClient.findNoteByName(params.noteName, archiveId);
+            if (!note) {
+                throw new NotFoundError(`Заметка с названием "${params.noteName}" не найдена в текущем каталоге`);
+            }
+            // Set as current note
+            contextStore.setNoteId(note.id, note.name);
+            return {
+                content: [{
+                        type: 'text',
+                        text: `Заметка "${note.name}" успешно выбрана. ID: ${note.id}`
+                    }]
+            };
+        }
+        catch (error) {
+            if (error instanceof NotFoundError || error instanceof ContextError) {
+                throw error;
+            }
+            throw new NotFoundError(`Заметка с названием "${params.noteName}" не найдена: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
+        }
     }
     /**
      * Routes tool requests to appropriate handlers
@@ -207,6 +359,14 @@ export class ToolHandlers {
                 return this.updateArchive(request);
             case TOOL_DELETE_ARCHIVE:
                 return this.deleteArchive(request);
+            case TOOL_SELECT_ARCHIVE_BY_ID:
+                return this.selectArchiveById(request);
+            case TOOL_SELECT_ARCHIVE_BY_NAME:
+                return this.selectArchiveByName(request);
+            case TOOL_SELECT_NOTE_BY_ID:
+                return this.selectNoteById(request);
+            case TOOL_SELECT_NOTE_BY_NAME:
+                return this.selectNoteByName(request);
             default:
                 throw new ValidationError(`Unknown tool: ${request.params.name}`);
         }

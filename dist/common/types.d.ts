@@ -4,7 +4,7 @@
 export interface TorrowNote {
     id: string;
     name: string;
-    text?: string;
+    data?: string;
     tags?: string[];
     noteType?: string;
     meta?: {
@@ -13,17 +13,25 @@ export interface TorrowNote {
         modifiedDate: string;
     };
     groupInfo?: {
-        isGroup: boolean;
+        rolesToSearchItems?: string[];
     };
 }
 export interface TorrowArchive extends TorrowNote {
     groupInfo: {
-        isGroup: true;
+        rolesToSearchItems?: string[];
     };
+}
+export interface TorrowContext {
+    id: string;
+    name: string;
+    [key: string]: unknown;
 }
 export interface Context {
     archiveId?: string;
+    archiveName?: string;
     noteId?: string;
+    noteName?: string;
+    contextId?: string;
 }
 export interface ParsedPhrase {
     name: string;
@@ -36,6 +44,7 @@ export interface SearchParams {
     archiveId?: string;
     take?: number;
     skip?: number;
+    distance?: number;
 }
 export interface SearchResult {
     items: TorrowNote[];
@@ -45,5 +54,23 @@ export interface ApiError {
     message: string;
     code?: string;
     details?: unknown;
+}
+export interface NoteViewResponse {
+    itemObject?: {
+        id: string;
+        meta?: {
+            version: number;
+            createdDate: string;
+            modifiedDate: string;
+        };
+    };
+    name: string;
+    data?: string;
+    tags?: string[];
+    noteType?: string;
+    groupInfo?: {
+        rolesToSearchItems?: string[];
+    };
+    [key: string]: unknown;
 }
 //# sourceMappingURL=types.d.ts.map
