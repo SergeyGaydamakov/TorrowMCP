@@ -219,65 +219,6 @@ TORROW_TOKEN=your_token
 2. Проверьте, что токен указан правильно
 3. В клиенте должны появиться доступные инструменты (tools), ресурсы (resources) и промпты (prompts) от сервера Torrow
 
-### Важно: Имя сервера и фильтрация ресурсов
-
-**Проблема:** Если при вызове `list_mcp_resources(server="torrow-mcp-service")` ресурсы не отображаются, но без фильтра по серверу они находятся, это означает несоответствие имени сервера.
-
-**Решение:**
-
-1. **Проверьте имя сервера в логах:** При запуске сервер выводит имя, с которым он зарегистрирован. Проверьте логи при старте сервера.
-
-2. **Проверьте имя в `list_mcp_resources()`:** Вызовите `list_mcp_resources()` без параметров и посмотрите, какое имя сервера отображается (например, `user-torrow-mcp-service`).
-
-3. **Синхронизируйте имена:**
-   - Если в `list_mcp_resources()` показывается `user-torrow-mcp-service`, а в конфигурации указан ключ `torrow-mcp-service`, то:
-     - **Вариант А:** Измените ключ в `mcp.json` на `user-torrow-mcp-service`
-     - **Вариант Б:** Добавьте в секцию `env` переменную `MCP_SERVER_NAME=user-torrow-mcp-service`
-   
-   - Если в `list_mcp_resources()` показывается `torrow-mcp-service`, а в конфигурации указан ключ `user-torrow-mcp-service`, то:
-     - **Вариант А:** Измените ключ в `mcp.json` на `torrow-mcp-service`
-     - **Вариант Б:** Добавьте в секцию `env` переменную `MCP_SERVER_NAME=torrow-mcp-service`
-
-4. **Перезапустите сервер** после изменения конфигурации.
-
-**Пример правильной конфигурации:**
-
-Если `list_mcp_resources()` показывает `user-torrow-mcp-service`:
-
-```json
-{
-  "mcpServers": {
-    "user-torrow-mcp-service": {
-      "command": "node",
-      "args": ["C:\\Sergeyg\\Torrow\\AI\\TorrowMCP\\dist\\index.js"],
-      "env": {
-        "TORROW_API_BASE": "https://torrow.net",
-        "TORROW_TOKEN": "your_torrow_token_here",
-        "MCP_SERVER_NAME": "user-torrow-mcp-service"
-      }
-    }
-  }
-}
-```
-
-Или если хотите использовать `torrow-mcp-service`:
-
-```json
-{
-  "mcpServers": {
-    "torrow-mcp-service": {
-      "command": "node",
-      "args": ["C:\\Sergeyg\\Torrow\\AI\\TorrowMCP\\dist\\index.js"],
-      "env": {
-        "TORROW_API_BASE": "https://torrow.net",
-        "TORROW_TOKEN": "your_torrow_token_here",
-        "MCP_SERVER_NAME": "torrow-mcp-service"
-      }
-    }
-  }
-}
-```
-
 ### Отладка
 
 Если сервер не подключается:

@@ -27,10 +27,11 @@ npm run build
 ```json
 {
   "mcpServers": {
-    "torrow": {
+    "torrow-mcp-service": {
       "command": "node",
       "args": ["C:\\Sergeyg\\Torrow\\AI\\TorrowMCP\\dist\\index.js"],
       "env": {
+        "TORROW_API_BASE": "https://torrow.net",
         "TORROW_TOKEN": "your_torrow_token_here"
       }
     }
@@ -79,7 +80,7 @@ npm run inspector
 ```json
 {
   "mcpServers": {
-    "torrow": {
+    "torrow-mcp-service": {
       "command": "npx",
       "args": ["tsx", "C:\\Sergeyg\\Torrow\\AI\\TorrowMCP\\src\\index.ts"],
       "env": {
