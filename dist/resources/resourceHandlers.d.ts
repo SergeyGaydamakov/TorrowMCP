@@ -15,10 +15,6 @@ export declare class ResourceHandlers {
      */
     handleArchiveResource(request: ReadResourceRequest): Promise<ReadResourceResult>;
     /**
-     * Handles archive note resource requests
-     */
-    handleArchiveNoteResource(request: ReadResourceRequest): Promise<ReadResourceResult>;
-    /**
      * Handles archives list resource requests
      */
     handleArchivesListResource(request: ReadResourceRequest): Promise<ReadResourceResult>;

@@ -3,17 +3,19 @@
  */
 import { z } from 'zod';
 
-export const SelectArchiveSchema = z.object({
-  archiveName: z.string().describe('Name of the archive to select')
+export const ListArchivesSchema = z.object({});
+
+export const SearchNotesSchema = z.object({
+  archiveId: z.string().describe('ID of the archive to search in'),
+  query: z.string().optional().describe('Search query text'),
+  tags: z.string().optional().describe('Tags to filter by (comma-separated)'),
+  limit: z.coerce.number().optional().default(20).describe('Maximum number of results')
 });
 
-export const SelectNoteSchema = z.object({
-  noteName: z.string().optional().describe('Name of the note to select'),
-  noteIndex: z.coerce.number().optional().describe('Index of the note from search results (1-based)')
+export const ArchiveStatsSchema = z.object({
+  archiveId: z.string().describe('ID of the archive to get statistics for')
 });
 
-export const ContextStatusSchema = z.object({});
-
-export type SelectArchiveParams = z.infer<typeof SelectArchiveSchema>;
-export type SelectNoteParams = z.infer<typeof SelectNoteSchema>;
-export type ContextStatusParams = z.infer<typeof ContextStatusSchema>;
+export type ListArchivesParams = z.infer<typeof ListArchivesSchema>;
+export type SearchNotesParams = z.infer<typeof SearchNotesSchema>;
+export type ArchiveStatsParams = z.infer<typeof ArchiveStatsSchema>;

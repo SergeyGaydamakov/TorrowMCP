@@ -4,7 +4,7 @@
 import { ReadResourceRequest, ReadResourceResult } from '@modelcontextprotocol/sdk/types.js';
 import { TorrowClient } from '../torrow/torrowClient.js';
 import { contextStore } from '../context/contextStore.js';
-import { NoteResourceSchema, ArchiveResourceSchema, ArchiveNoteResourceSchema } from './resourceSchemas.js';
+import { NoteResourceSchema, ArchiveResourceSchema } from './resourceSchemas.js';
 import { NotFoundError, ValidationError } from '../common/errors.js';
 
 export class ResourceHandlers {
@@ -129,72 +129,6 @@ export class ResourceHandlers {
   }
 
   /**
-   * Handles archive note resource requests
-   */
-  async handleArchiveNoteResource(request: ReadResourceRequest): Promise<ReadResourceResult> {
-    try {
-      // Parse URI to extract archiveName and noteName
-      const uri = request.params.uri.toString();
-      const uriMatch = uri.match(/torrow:\/\/archiveNote\/([^/]+)\/(.+)$/);
-      if (!uriMatch) {
-        throw new ValidationError('Invalid archive note URI format. Expected: torrow://archiveNote/{archiveName}/{noteName}');
-      }
-
-      const archiveName = decodeURIComponent(uriMatch[1]);
-      const noteName = decodeURIComponent(uriMatch[2]);
-
-      const params = ArchiveNoteResourceSchema.parse({ archiveName, noteName });
-
-      // Find or create MCP context
-      let mcpContextId = contextStore.getMcpContextId();
-      if (!mcpContextId) {
-        const mcpContext = await this.torrowClient.findOrCreateMCPContext();
-        mcpContextId = mcpContext.id;
-        contextStore.setMcpContextId(mcpContextId);
-      }
-
-      // Find archive by name
-      const archive = await this.torrowClient.findArchiveByName(params.archiveName, mcpContextId);
-      if (!archive) {
-        throw new NotFoundError(`Archive "${params.archiveName}" not found`);
-      }
-
-      // Find note by name in archive
-      const note = await this.torrowClient.findNoteByName(params.noteName, archive.id);
-      if (!note) {
-        throw new NotFoundError(`Note "${params.noteName}" not found in archive "${params.archiveName}"`);
-      }
-
-      return {
-        contents: [{
-          uri: request.params.uri,
-          mimeType: 'application/json',
-          text: JSON.stringify({
-            id: note.id,
-            name: note.name,
-            text: note.data,
-            tags: note.tags,
-            type: 'note',
-            archive: {
-              id: archive.id,
-              name: archive.name
-            },
-            meta: note.meta
-          }, null, 2)
-        }]
-      };
-    } catch (error) {
-      if (error instanceof NotFoundError || error instanceof ValidationError) {
-        throw error;
-      }
-      if (error instanceof Error) {
-        throw new NotFoundError(`Failed to get archive note: ${error.message}`);
-      }
-      throw error;
-    }
-  }
-
-  /**
    * Handles archives list resource requests
    */
   async handleArchivesListResource(request: ReadResourceRequest): Promise<ReadResourceResult> {
@@ -258,8 +192,6 @@ export class ResourceHandlers {
           return this.handleArchiveResource(request);
         case 'archives':
           return this.handleArchivesListResource(request);
-        case 'archiveNote':
-          return this.handleArchiveNoteResource(request);
         default:
           throw new NotFoundError(`Unknown resource type: ${resourceType}. Full request: ${JSON.stringify(request, null, 2)}`);
       }

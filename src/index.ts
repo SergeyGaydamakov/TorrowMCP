@@ -3,7 +3,9 @@
 /**
  * Torrow MCP Server - Main entry point
  */
-import 'dotenv/config';
+import { config } from 'dotenv';
+// Load dotenv silently to avoid stdout pollution
+config({ debug: false });
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
@@ -17,7 +19,8 @@ import {
   CallToolRequest,
   ReadResourceRequest,
   GetPromptRequest,
-  CompleteRequest
+  CompleteRequest,
+  Resource
 } from '@modelcontextprotocol/sdk/types.js';
 
 import { TorrowClient } from './torrow/torrowClient.js';
@@ -37,11 +40,26 @@ class TorrowMcpServer {
   private resourceHandlers: ResourceHandlers;
   private toolHandlers: ToolHandlers;
   private promptHandlers: PromptHandlers;
+  private serverName: string;
 
   constructor() {
+    // NOTE: The server name here is used for identification in logs, metadata, and resource listing.
+    // The actual server identifier used by MCP clients (like Cursor) is configured
+    // in the client's MCP configuration file (mcp.json). 
+    // 
+    // IMPORTANT: The server name MUST match the key in mcpServers configuration!
+    // If Cursor shows "user-torrow-mcp-service" in list_mcp_resources(), then either:
+    // 1. Change the key in mcp.json to "user-torrow-mcp-service", OR
+    // 2. Set MCP_SERVER_NAME environment variable to match the key in mcp.json
+    // 
+    // Mismatched names will cause GPT to fail when trying to use resources.
+    // Common server identifier names: "torrow", "user-torrow", "torrow-mcp-service"
+    // The server name can be configured via MCP_SERVER_NAME or TORROW_MCP_SERVER_NAME
+    // environment variable or command line argument (e.g., MCP_SERVER_NAME=torrow).
+    this.serverName = this.getServerName();
     this.server = new Server(
       {
-        name: 'torrow-mcp-service',
+        name: this.serverName,
         version: '1.0.0'
       },
       {
@@ -81,13 +99,41 @@ class TorrowMcpServer {
     return process.env.TORROW_API_BASE || this.getArgsValue('TORROW_API_BASE')[0] || '';
   }
 
+  // Получение имени сервера из аргументов или переменных окружения
+  // Поддерживает MCP_SERVER_NAME и TORROW_MCP_SERVER_NAME для универсальности
+  // ВАЖНО: Имя сервера должно совпадать с ключом в конфигурации MCP клиента (mcp.json)
+  // Если Cursor показывает "user-torrow-mcp-service", убедитесь, что в конфигурации
+  // указан ключ "torrow-mcp-service" (без префикса "user-"), или установите переменную
+  // окружения MCP_SERVER_NAME=torrow-mcp-service
+  private getServerName(): string {
+    return process.env.MCP_SERVER_NAME || 
+           process.env.TORROW_MCP_SERVER_NAME || 
+           this.getArgsValue('MCP_SERVER_NAME')[0] || 
+           this.getArgsValue('TORROW_MCP_SERVER_NAME')[0] || 
+           'torrow-mcp-service';
+  }
+
+  /**
+   * Returns resources with server name hints in descriptions
+   * This helps users identify the correct server name when resources are not found
+   */
+  private getResourcesWithServerHint(): Resource[] {
+    const serverHint = `\n\n⚠️ SERVER NAME HINT: This server is registered as "${this.serverName}". If resources are not found when using list_mcp_resources(server="..."), make sure to use server="${this.serverName}". The server name must match the key in your MCP client configuration (mcp.json). To fix: either change the key in mcp.json to "${this.serverName}", or set MCP_SERVER_NAME="${this.serverName}" in the env section of your mcp.json configuration.`;
+    
+    return resources.map(resource => ({
+      ...resource,
+      description: resource.description + serverHint
+    }));
+  }
+
   /**
    * Sets up MCP request handlers
    */
   private setupHandlers(): void {
-    // Resources
+    // Resources - include server name hint in descriptions
+    const resourcesWithServerHint = this.getResourcesWithServerHint();
     this.server.setRequestHandler(ListResourcesRequestSchema, async () => ({
-      resources
+      resources: resourcesWithServerHint
     }));
 
     this.server.setRequestHandler(ReadResourceRequestSchema, async (request: ReadResourceRequest) => {
@@ -125,7 +171,10 @@ class TorrowMcpServer {
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
     
-    console.error('Torrow MCP Server started successfully');
+    const serverName = this.getServerName();
+    console.error(`Torrow MCP Server started successfully with name: "${serverName}"`);
+    console.error(`IMPORTANT: Make sure the server name "${serverName}" matches the key in your MCP client configuration (mcp.json)`);
+    console.error(`If list_mcp_resources() shows a different server name, set MCP_SERVER_NAME environment variable to match it.`);
   }
 }
 

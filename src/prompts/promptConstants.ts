@@ -2,6 +2,6 @@
  * Constants for MCP prompts
  */
 
-export const PROMPT_SELECT_ARCHIVE = 'select_archive';
-export const PROMPT_SELECT_NOTE = 'select_note';
-export const PROMPT_CONTEXT_STATUS = 'context_status';
+export const PROMPT_LIST_ARCHIVES = 'list_archives';
+export const PROMPT_SEARCH_NOTES = 'search_notes';
+export const PROMPT_ARCHIVE_STATS = 'archive_stats';

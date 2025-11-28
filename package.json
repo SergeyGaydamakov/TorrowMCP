@@ -9,8 +9,8 @@
     "dev": "tsx src/index.ts",
     "start": "node dist/index.js",
     "debug": "tsx --inspect-brk src/index.ts",
-    "dev-inspector": "set DANGEROUSLY_OMIT_AUTH=1&& set CLIENT_PORT=8080&& set SERVER_PORT=9000&& set DOTENV_CONFIG_DEBUG=false&& npx @modelcontextprotocol/inspector tsx src/index.ts",
-    "inspector": "set DANGEROUSLY_OMIT_AUTH=1&& set CLIENT_PORT=8080&& set SERVER_PORT=9000&& set DOTENV_CONFIG_DEBUG=false&& npx @modelcontextprotocol/inspector node dist/index.js",
+    "dev-inspector": "set DANGEROUSLY_OMIT_AUTH=1&& set CLIENT_PORT=8080&& set SERVER_PORT=9000&& set DOTENV_CONFIG_DEBUG=false&& set MCP_AUTO_OPEN_ENABLED=1&& npx @modelcontextprotocol/inspector tsx src/index.ts",
+    "inspector": "set DANGEROUSLY_OMIT_AUTH=1&& set CLIENT_PORT=8080&& set SERVER_PORT=9000&& set DOTENV_CONFIG_DEBUG=false&& set MCP_AUTO_OPEN_ENABLED=1&& npx @modelcontextprotocol/inspector node dist/index.js",
     "test": "jest",
     "test:watch": "jest --watch"
   },

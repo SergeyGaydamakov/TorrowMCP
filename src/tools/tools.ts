@@ -9,56 +9,71 @@ import {
   TOOL_SEARCH_NOTES,
   TOOL_CREATE_ARCHIVE,
   TOOL_UPDATE_ARCHIVE,
-  TOOL_DELETE_ARCHIVE,
-  TOOL_SELECT_ARCHIVE_BY_ID,
-  TOOL_SELECT_ARCHIVE_BY_NAME,
-  TOOL_SELECT_NOTE_BY_ID,
-  TOOL_SELECT_NOTE_BY_NAME
+  TOOL_DELETE_ARCHIVE
 } from './toolConstants.js';
+import { RESOURCE_ARCHIVES_LIST } from '../resources/resourceConstants.js';
 
 export const tools: Tool[] = [
   {
     name: TOOL_CREATE_NOTE,
-    description: 'Create a new note in the current archive',
+    description: 'Create a new note in the specified archive',
     inputSchema: {
       type: 'object',
       properties: {
+        archiveId: {
+          type: 'string',
+          description: `ID of the archive (catalog) in which to create the note. List all available archives in resources ${RESOURCE_ARCHIVES_LIST}`
+        },
         phrase: {
           type: 'string',
           description: 'Phrase in format: <name>.<text>#tag#tag'
         }
       },
-      required: ['phrase']
+      required: ['archiveId', 'phrase']
     }
   },
   {
     name: TOOL_UPDATE_NOTE,
-    description: 'Update the current note',
+    description: 'Update a note by ID',
     inputSchema: {
       type: 'object',
       properties: {
+        noteId: {
+          type: 'string',
+          description: 'ID of the note to update'
+        },
         phrase: {
           type: 'string',
           description: 'New phrase in format: <name>.<text>#tag#tag'
         }
       },
-      required: ['phrase']
+      required: ['noteId', 'phrase']
     }
   },
   {
     name: TOOL_DELETE_NOTE,
-    description: 'Delete the current note',
+    description: 'Delete a note by ID',
     inputSchema: {
       type: 'object',
-      properties: {}
+      properties: {
+        noteId: {
+          type: 'string',
+          description: 'ID of the note to delete'
+        }
+      },
+      required: ['noteId']
     }
   },
   {
     name: TOOL_SEARCH_NOTES,
-    description: 'Search notes in the current archive by phrase and tags',
+    description: 'Search notes in the specified archive by phrase and tags',
     inputSchema: {
       type: 'object',
       properties: {
+        archiveId: {
+          type: 'string',
+          description: `ID of the archive (catalog) in which to search notes. List all available archives in resources ${RESOURCE_ARCHIVES_LIST}`
+        },
         phrase: {
           type: 'string',
           description: 'Search phrase'
@@ -73,7 +88,8 @@ export const tools: Tool[] = [
           default: 10,
           description: 'Maximum number of results (default: 10)'
         }
-      }
+      },
+      required: ['archiveId']
     }
   },
   {
@@ -92,86 +108,39 @@ export const tools: Tool[] = [
   },
   {
     name: TOOL_UPDATE_ARCHIVE,
-    description: 'Update the current archive (catalog)',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        phrase: {
-          type: 'string',
-          description: 'New phrase in format: <name>.<text>#tag#tag'
-        }
-      },
-      required: ['phrase']
-    }
-  },
-  {
-    name: TOOL_DELETE_ARCHIVE,
-    description: 'Delete the current archive (catalog) with optional cascade deletion',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        cascade: {
-          type: 'boolean',
-          default: false,
-          description: 'Delete all notes in archive (default: false)'
-        }
-      }
-    }
-  },
-  {
-    name: TOOL_SELECT_ARCHIVE_BY_ID,
-    description: 'Select an archive (catalog) by ID and make it current',
+    description: 'Update an archive (catalog) by ID',
     inputSchema: {
       type: 'object',
       properties: {
         archiveId: {
           type: 'string',
-          description: 'ID of the archive to select'
+          description: 'ID of the archive to update'
+        },
+        phrase: {
+          type: 'string',
+          description: 'New phrase in format: <name>.<text>#tag#tag'
+        }
+      },
+      required: ['archiveId', 'phrase']
+    }
+  },
+  {
+    name: TOOL_DELETE_ARCHIVE,
+    description: 'Delete an archive (catalog) by ID with optional cascade deletion',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        archiveId: {
+          type: 'string',
+          description: 'ID of the archive to delete'
+        },
+        cascade: {
+          type: 'boolean',
+          default: false,
+          description: 'Delete all notes in archive (default: false)'
         }
       },
       required: ['archiveId']
-    }
-  },
-  {
-    name: TOOL_SELECT_ARCHIVE_BY_NAME,
-    description: 'Select an archive (catalog) by name and make it current',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        archiveName: {
-          type: 'string',
-          description: 'Name of the archive to select'
-        }
-      },
-      required: ['archiveName']
-    }
-  },
-  {
-    name: TOOL_SELECT_NOTE_BY_ID,
-    description: 'Select a note by ID and make it current',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        noteId: {
-          type: 'string',
-          description: 'ID of the note to select'
-        }
-      },
-      required: ['noteId']
-    }
-  },
-  {
-    name: TOOL_SELECT_NOTE_BY_NAME,
-    description: 'Select a note by name and make it current',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        noteName: {
-          type: 'string',
-          description: 'Name of the note to select'
-        }
-      },
-      required: ['noteName']
     }
   }
 ];

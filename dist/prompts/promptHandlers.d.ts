@@ -7,17 +7,17 @@ export declare class PromptHandlers {
     private torrowClient;
     constructor(torrowClient: TorrowClient);
     /**
-     * Selects an archive by name and makes it current
+     * Lists all available archives
      */
-    selectArchive(request: GetPromptRequest): Promise<GetPromptResult>;
+    listArchives(request: GetPromptRequest): Promise<GetPromptResult>;
     /**
-     * Selects a note by name or index and makes it current
+     * Searches notes in an archive
      */
-    selectNote(request: GetPromptRequest): Promise<GetPromptResult>;
+    searchNotes(request: GetPromptRequest): Promise<GetPromptResult>;
     /**
-     * Shows current context status
+     * Gets statistics about an archive
      */
-    contextStatus(request: GetPromptRequest): Promise<GetPromptResult>;
+    archiveStats(request: GetPromptRequest): Promise<GetPromptResult>;
     /**
      * Handles completion requests for prompt arguments
      */

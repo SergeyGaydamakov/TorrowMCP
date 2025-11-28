@@ -1,6 +1,3 @@
 #!/usr/bin/env node
-/**
- * Torrow MCP Server - Main entry point
- */
-import 'dotenv/config';
+export {};
 //# sourceMappingURL=index.d.ts.map

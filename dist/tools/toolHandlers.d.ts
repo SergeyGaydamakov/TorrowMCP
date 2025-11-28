@@ -11,15 +11,15 @@ export declare class ToolHandlers {
      */
     createNote(request: CallToolRequest): Promise<CallToolResult>;
     /**
-     * Updates current note
+     * Updates note by ID
      */
     updateNote(request: CallToolRequest): Promise<CallToolResult>;
     /**
-     * Deletes current note
+     * Deletes note by ID
      */
     deleteNote(request: CallToolRequest): Promise<CallToolResult>;
     /**
-     * Searches notes in current archive
+     * Searches notes in specified archive
      */
     searchNotes(request: CallToolRequest): Promise<CallToolResult>;
     /**
@@ -27,29 +27,13 @@ export declare class ToolHandlers {
      */
     createArchive(request: CallToolRequest): Promise<CallToolResult>;
     /**
-     * Updates current archive
+     * Updates archive by ID
      */
     updateArchive(request: CallToolRequest): Promise<CallToolResult>;
     /**
-     * Deletes current archive
+     * Deletes archive by ID
      */
     deleteArchive(request: CallToolRequest): Promise<CallToolResult>;
-    /**
-     * Selects an archive by ID and makes it current
-     */
-    selectArchiveById(request: CallToolRequest): Promise<CallToolResult>;
-    /**
-     * Selects an archive by name and makes it current
-     */
-    selectArchiveByName(request: CallToolRequest): Promise<CallToolResult>;
-    /**
-     * Selects a note by ID and makes it current
-     */
-    selectNoteById(request: CallToolRequest): Promise<CallToolResult>;
-    /**
-     * Selects a note by name and makes it current
-     */
-    selectNoteByName(request: CallToolRequest): Promise<CallToolResult>;
     /**
      * Routes tool requests to appropriate handlers
      */

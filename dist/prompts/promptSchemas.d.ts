@@ -2,25 +2,31 @@
  * Zod schemas for MCP prompts
  */
 import { z } from 'zod';
-export declare const SelectArchiveSchema: z.ZodObject<{
-    archiveName: z.ZodString;
+export declare const ListArchivesSchema: z.ZodObject<{}, "strip", z.ZodTypeAny, {}, {}>;
+export declare const SearchNotesSchema: z.ZodObject<{
+    archiveId: z.ZodString;
+    query: z.ZodOptional<z.ZodString>;
+    tags: z.ZodOptional<z.ZodString>;
+    limit: z.ZodDefault<z.ZodOptional<z.ZodNumber>>;
 }, "strip", z.ZodTypeAny, {
-    archiveName: string;
+    archiveId: string;
+    limit: number;
+    tags?: string | undefined;
+    query?: string | undefined;
 }, {
-    archiveName: string;
+    archiveId: string;
+    tags?: string | undefined;
+    limit?: number | undefined;
+    query?: string | undefined;
 }>;
-export declare const SelectNoteSchema: z.ZodObject<{
-    noteName: z.ZodOptional<z.ZodString>;
-    noteIndex: z.ZodOptional<z.ZodNumber>;
+export declare const ArchiveStatsSchema: z.ZodObject<{
+    archiveId: z.ZodString;
 }, "strip", z.ZodTypeAny, {
-    noteName?: string | undefined;
-    noteIndex?: number | undefined;
+    archiveId: string;
 }, {
-    noteName?: string | undefined;
-    noteIndex?: number | undefined;
+    archiveId: string;
 }>;
-export declare const ContextStatusSchema: z.ZodObject<{}, "strip", z.ZodTypeAny, {}, {}>;
-export type SelectArchiveParams = z.infer<typeof SelectArchiveSchema>;
-export type SelectNoteParams = z.infer<typeof SelectNoteSchema>;
-export type ContextStatusParams = z.infer<typeof ContextStatusSchema>;
+export type ListArchivesParams = z.infer<typeof ListArchivesSchema>;
+export type SearchNotesParams = z.infer<typeof SearchNotesSchema>;
+export type ArchiveStatsParams = z.infer<typeof ArchiveStatsSchema>;
 //# sourceMappingURL=promptSchemas.d.ts.map

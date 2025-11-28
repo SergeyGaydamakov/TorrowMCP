@@ -13,12 +13,6 @@ export const ArchiveResourceSchema = z.object({
 
 export const ArchivesListResourceSchema = z.object({});
 
-export const ArchiveNoteResourceSchema = z.object({
-  archiveName: z.string().describe('Name of the archive (catalog)'),
-  noteName: z.string().describe('Name of the note in the archive (catalog)')
-});
-
 export type NoteResourceParams = z.infer<typeof NoteResourceSchema>;
 export type ArchiveResourceParams = z.infer<typeof ArchiveResourceSchema>;
 export type ArchivesListResourceParams = z.infer<typeof ArchivesListResourceSchema>;
-export type ArchiveNoteResourceParams = z.infer<typeof ArchiveNoteResourceSchema>;

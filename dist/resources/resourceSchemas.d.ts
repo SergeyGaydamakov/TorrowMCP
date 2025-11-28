@@ -17,18 +17,7 @@ export declare const ArchiveResourceSchema: z.ZodObject<{
     archiveId: string;
 }>;
 export declare const ArchivesListResourceSchema: z.ZodObject<{}, "strip", z.ZodTypeAny, {}, {}>;
-export declare const ArchiveNoteResourceSchema: z.ZodObject<{
-    archiveName: z.ZodString;
-    noteName: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    archiveName: string;
-    noteName: string;
-}, {
-    archiveName: string;
-    noteName: string;
-}>;
 export type NoteResourceParams = z.infer<typeof NoteResourceSchema>;
 export type ArchiveResourceParams = z.infer<typeof ArchiveResourceSchema>;
 export type ArchivesListResourceParams = z.infer<typeof ArchivesListResourceSchema>;
-export type ArchiveNoteResourceParams = z.infer<typeof ArchiveNoteResourceSchema>;
 //# sourceMappingURL=resourceSchemas.d.ts.map

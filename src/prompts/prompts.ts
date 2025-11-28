@@ -3,42 +3,52 @@
  */
 import { Prompt } from '@modelcontextprotocol/sdk/types.js';
 import {
-  PROMPT_SELECT_ARCHIVE,
-  PROMPT_SELECT_NOTE,
-  PROMPT_CONTEXT_STATUS
+  PROMPT_LIST_ARCHIVES,
+  PROMPT_SEARCH_NOTES,
+  PROMPT_ARCHIVE_STATS
 } from './promptConstants.js';
 
 export const prompts: Prompt[] = [
   {
-    name: PROMPT_SELECT_ARCHIVE,
-    description: 'Select an archive by name and make it current',
-    arguments: [
-      {
-        name: 'archiveName',
-        description: 'Name of the archive to select (completion suggestions available from getArchives)',
-        required: true
-      }
-    ]
+    name: PROMPT_LIST_ARCHIVES,
+    description: 'List all available archives (catalogs) with their details',
+    arguments: []
   },
   {
-    name: PROMPT_SELECT_NOTE,
-    description: 'Select a note by name or index and make it current',
+    name: PROMPT_SEARCH_NOTES,
+    description: 'Search notes in an archive with optional filters by text and tags',
     arguments: [
       {
-        name: 'noteName',
-        description: 'Name of the note to select',
+        name: 'archiveId',
+        description: 'ID of the archive to search in',
+        required: true
+      },
+      {
+        name: 'query',
+        description: 'Search query text (optional)',
         required: false
       },
       {
-        name: 'noteIndex',
-        description: 'Index of the note from search results (1-based)',
+        name: 'tags',
+        description: 'Tags to filter by (comma-separated, optional)',
+        required: false
+      },
+      {
+        name: 'limit',
+        description: 'Maximum number of results (default: 20)',
         required: false
       }
     ]
   },
   {
-    name: PROMPT_CONTEXT_STATUS,
-    description: 'Show current context status (current archive and note)',
-    arguments: []
+    name: PROMPT_ARCHIVE_STATS,
+    description: 'Get statistics about an archive: number of notes, tags, and other metadata',
+    arguments: [
+      {
+        name: 'archiveId',
+        description: 'ID of the archive to get statistics for',
+        required: true
+      }
+    ]
   }
 ];
