@@ -427,6 +427,9 @@ export class TorrowService {
       return mcpContext;
     }
     this.mcpContext = await this.torrowClient.createContext("MCP");
+    // Заметка, которая по умолчанию будет включаться в MCP контекст
+    const NOTE_FIND_RECIEPT = "1b5f03eb7bd076afe23ef66a8d0b619e";
+    await this.torrowClient.saveNoteToMindmap(NOTE_FIND_RECIEPT, this.mcpContext.id);
     return this.mcpContext;
   }
 

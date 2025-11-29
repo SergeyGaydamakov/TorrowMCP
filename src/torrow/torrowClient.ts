@@ -274,4 +274,15 @@ export class TorrowClient {
     return response.data || [];
   }
 
+  /**
+   * Saves a note to mindmap
+   */
+  async saveNoteToMindmap(noteId: string, parentItemId: string): Promise<void> {
+    const requestBody = {
+      offlinable: true,
+      parentItemId: parentItemId
+    };
+    await this.client.put(`/api/v1/notes/${noteId}/savetomindmap`, requestBody);
+  }
+
 }
