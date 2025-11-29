@@ -5,7 +5,7 @@ import {
   CallToolRequest,
   CallToolResult,
 } from "@modelcontextprotocol/sdk/types.js";
-import { parsePhrase, validateName } from "../util/phrase.js";
+import { validateName } from "../util/phrase.js";
 import { ValidationError } from "../common/errors.js";
 import {
   TOOL_CREATE_NOTE,
@@ -34,10 +34,9 @@ export class ToolHandlers {
    * Creates a new note
    */
   async createNote(request: CallToolRequest): Promise<CallToolResult> {
-    const { archiveId, phrase } = CreateNoteSchema.parse(
+    const { archiveId, name, text, tags } = CreateNoteSchema.parse(
       request.params.arguments
     );
-    const { name, text, tags } = parsePhrase(phrase);
 
     validateName(name);
 
@@ -65,8 +64,7 @@ export class ToolHandlers {
    * Updates note by ID
    */
   async updateNote(request: CallToolRequest): Promise<CallToolResult> {
-    const { noteId, phrase } = UpdateNoteSchema.parse(request.params.arguments);
-    const { name, text, tags } = parsePhrase(phrase);
+    const { noteId, name, text, tags } = UpdateNoteSchema.parse(request.params.arguments);
 
     validateName(name);
 
@@ -159,8 +157,7 @@ export class ToolHandlers {
    * Creates a new archive
    */
   async createArchive(request: CallToolRequest): Promise<CallToolResult> {
-    const { phrase } = CreateArchiveSchema.parse(request.params.arguments);
-    const { name, text, tags } = parsePhrase(phrase);
+    const { name, text, tags } = CreateArchiveSchema.parse(request.params.arguments);
 
     validateName(name);
 
@@ -185,10 +182,9 @@ export class ToolHandlers {
    * Updates archive by ID
    */
   async updateArchive(request: CallToolRequest): Promise<CallToolResult> {
-    const { archiveId, phrase } = UpdateArchiveSchema.parse(
+    const { archiveId, name, text, tags } = UpdateArchiveSchema.parse(
       request.params.arguments
     );
-    const { name, text, tags } = parsePhrase(phrase);
 
     validateName(name);
 

@@ -73,26 +73,18 @@ export class PromptHandlers {
    * Searches notes in an archive
    */
   async searchNotes(request: GetPromptRequest): Promise<GetPromptResult> {
-    const { query, limit, skip, archiveId, tags, distance } =
+    const { phrase, limit, skip, archiveId, tags, distance } =
       SearchNotesSchema.parse(request.params.arguments || {});
 
     // Get archive to verify it exists
     const archive = await this.torrowService.getArchive(archiveId);
 
-    // Parse tags if provided
-    const parsedTags = tags
-      ? tags
-          .split(",")
-          .map((tag: string) => tag.trim())
-          .filter((tag: string) => tag.length > 0)
-      : undefined;
-
     const result = await this.torrowService.searchNotes(
-      query,
+      phrase,
       limit,
       skip,
       archive.id,
-      parsedTags,
+      tags,
       distance
     );
 

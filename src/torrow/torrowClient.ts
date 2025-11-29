@@ -81,9 +81,11 @@ export class TorrowClient {
     if (createNoteInfo.data !== undefined) {
       requestBody.data = createNoteInfo.data;
     }
+    /* Tags are set in addNoteToGroup method
     if (createNoteInfo.tags !== undefined) {
       requestBody.tags = createNoteInfo.tags;
     }
+    */
     requestBody.noteType = createNoteInfo.noteType || 'Text';
     requestBody.discriminator = 'NoteItem';
     requestBody.files = [];
@@ -123,6 +125,21 @@ export class TorrowClient {
    */
   async getNote(torrowId: string): Promise<TorrowNote> {
     const response: AxiosResponse<TorrowNote> = await this.client.get(`/api/v1/notes/${torrowId}`);
+    return response.data;
+  }
+
+  /**
+   * Updates tags for a note by ID
+   */
+  async updateNoteTags(torrowId: string, tags: string[]): Promise<void> {
+    await this.client.put(`/api/v1/notes/${torrowId}/tags`, tags);
+  }
+
+  /**
+   * Updates solutiondata for a note by ID
+   */
+  async updateNoteSolutionData(torrowId: string, solutionData: unknown): Promise<TorrowNote> {
+    const response: AxiosResponse<TorrowNote> = await this.client.put(`/api/v1/notes/${torrowId}/solutiondata`, solutionData);
     return response.data;
   }
 

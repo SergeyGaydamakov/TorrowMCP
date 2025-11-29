@@ -24,6 +24,9 @@ export interface TorrowNote {
   groupInfo?: {
     rolesToSearchItems?: string[];
   };
+  solutionData?: {
+    quickFilterTags?: string[];
+  };
 }
 
 export interface TorrowNoteInArchive extends TorrowNote {

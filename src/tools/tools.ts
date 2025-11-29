@@ -24,12 +24,21 @@ export const tools: Tool[] = [
           type: 'string',
           description: `ID of the archive (catalog) in which to create the note. List all available archives in resources ${RESOURCE_ARCHIVES_LIST}`
         },
-        phrase: {
+        name: {
           type: 'string',
-          description: 'Phrase in format: <name>.<text>#tag#tag'
+          description: 'Name of the note'
+        },
+        text: {
+          type: 'string',
+          description: 'Text content of the note. Light html formatted text of the note including <img> and <a> tags.'
+        },
+        tags: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Tags for the note. Tags are used to group notes in the archive. Tag is simple string 3 - 100 characters [A-z, А-я, 0-9, /,\,-,_,.] or two strings separated by colon (<tag_value>:<tag_group>).'
         }
       },
-      required: ['archiveId', 'phrase']
+      required: ['archiveId', 'name', 'text', 'tags']
     }
   },
   {
@@ -42,12 +51,21 @@ export const tools: Tool[] = [
           type: 'string',
           description: 'ID of the note to update'
         },
-        phrase: {
+        name: {
           type: 'string',
-          description: 'New phrase in format: <name>.<text>#tag#tag'
+          description: 'Name of the note'
+        },
+        text: {
+          type: 'string',
+          description: 'Text content of the note. Light html formatted text of the note including <img> and <a> tags.'
+        },
+        tags: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Tags for the note. Tags are used to group notes in the archive. Tag is simple string 3 - 100 characters [A-z, А-я, 0-9, /,\,-,_,.] or two strings separated by colon (<tag_value>:<tag_group>).'
         }
       },
-      required: ['noteId', 'phrase']
+      required: ['noteId', 'name', 'text', 'tags']
     }
   },
   {
@@ -81,7 +99,7 @@ export const tools: Tool[] = [
         tags: {
           type: 'array',
           items: { type: 'string' },
-          description: 'Tags to filter by'
+          description: 'Tags to filter by. Tags are used to group notes in the archive. Tag is simple string 3 - 100 characters [A-z, А-я, 0-9, /,\,-,_,.] or two strings separated by colon (<tag_value>:<tag_group>).'
         },
         limit: {
           type: 'number',
@@ -96,7 +114,7 @@ export const tools: Tool[] = [
         distance: {
           type: 'number',
           default: 0,
-          description: 'Distance between results in characters (default: 0)'
+          description: 'Distance between results in characters (default: 0). Distance is used to search for notes with similar text.'
         }
       },
       required: ['archiveId']
@@ -108,12 +126,21 @@ export const tools: Tool[] = [
     inputSchema: {
       type: 'object',
       properties: {
-        phrase: {
+        name: {
           type: 'string',
-          description: 'Phrase in format: <name>.<text>#tag#tag'
+          description: 'Name of the archive'
+        },
+        text: {
+          type: 'string',
+          description: 'Text content of the archive. Light html formatted text of the archive including <img> and <a> tags.'
+        },
+        tags: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Tags for the archive. Tags are used to group notes in the archive. Tag is simple string 3 - 100 characters [A-z, А-я, 0-9, /,\,-,_,.] or two strings separated by colon (<tag_value>:<tag_group>).'
         }
       },
-      required: ['phrase']
+      required: ['name', 'text', 'tags']
     }
   },
   {
@@ -126,12 +153,21 @@ export const tools: Tool[] = [
           type: 'string',
           description: 'ID of the archive to update'
         },
-        phrase: {
+        name: {
           type: 'string',
-          description: 'New phrase in format: <name>.<text>#tag#tag'
+          description: 'Name of the archive'
+        },
+        text: {
+          type: 'string',
+          description: 'Text content of the archive. Light html formatted text of the archive.'
+        },
+        tags: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Tags for the archive. Tags are used to group notes in the archive. Tag is simple string 3 - 100 characters [A-z, А-я, 0-9, /,\,-,_,.] or two strings separated by colon (<tag_value>:<tag_group>).'
         }
       },
-      required: ['archiveId', 'phrase']
+      required: ['archiveId', 'name', 'text', 'tags']
     }
   },
   {

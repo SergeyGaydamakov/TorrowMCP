@@ -24,18 +24,30 @@ export const prompts: Prompt[] = [
         required: true
       },
       {
-        name: 'query',
-        description: 'Search query text (optional)',
+        name: 'phrase',
+        description: 'Search phrase text (optional)',
         required: false
       },
       {
         name: 'tags',
-        description: 'Tags to filter by (comma-separated, optional)',
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Tags to filter by. Tags are used to group notes in the archive. Tag is simple string 3 - 100 characters [A-z, А-я, 0-9, /,\,-,_,.] or two strings separated by colon (<tag_value>:<tag_group>).',
         required: false
       },
       {
         name: 'limit',
         description: 'Maximum number of results (default: 20)',
+        required: false
+      },
+      {
+        name: 'skip',
+        description: 'Skip number of results (default: 0)',
+        required: false
+      },
+      {
+        name: 'distance',
+        description: 'Distance between results in characters (default: 0). Distance is used to search for notes with similar text.',
         required: false
       }
     ]

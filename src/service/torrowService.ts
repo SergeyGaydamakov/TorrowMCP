@@ -51,6 +51,10 @@ export class TorrowService {
       archiveId,
       createNoteInfo.tags
     );
+    // Update tags for the note
+    if (createNoteInfo.tags !== undefined && createNoteInfo.tags.length > 0) {
+      await this.torrowClient.updateNoteTags(note.id, createNoteInfo.tags);
+    }
     return { ...note, archiveId: archiveId, archiveName: archive.name };
   }
 
@@ -75,11 +79,12 @@ export class TorrowService {
     if (noteText !== undefined) {
       currentNote.data = noteText;
     }
-    if (noteTags !== undefined && noteTags.length > 0) {
-      currentNote.tags = noteTags;
-    }
 
     await this.torrowClient.updateNote(currentNote);
+    // Update tags for the note
+    if (noteTags !== undefined && noteTags.length > 0) {
+      await this.torrowClient.updateNoteTags(noteId, noteTags);
+    }
     return currentNote;
   }
 
@@ -244,8 +249,18 @@ export class TorrowService {
     if (!archive || !archive.id) {
       throw new NotFoundError(`Failed to create archive`);
     }
-    // Convert to archive
+    // Convert to archive and set tags
     await this.torrowClient.setNoteAsGroup(archive.id);
+
+    if (createNoteInfo.tags !== undefined && createNoteInfo.tags.length > 0) {
+      await this.torrowClient.updateNoteTags(archive.id, createNoteInfo.tags);
+      // Установка быстрого фильтра по тегам для архива
+      const solutionData = {
+        ...archive.solutionData,
+        quickFilterTags: createNoteInfo.tags,
+      };
+      await this.torrowClient.updateNoteSolutionData(archive.id, solutionData);
+    }
 
     // Проверяем, что каталог создан в MCP контексте
     const newArchives = await this.getArchives();
@@ -289,10 +304,19 @@ export class TorrowService {
     if (archiveText !== undefined) {
       currentArchive.data = archiveText;
     }
-    if (archiveTags !== undefined && archiveTags.length > 0) {
-      currentArchive.tags = archiveTags;
-    }
+
     await this.torrowClient.updateNote(currentArchive);
+
+    // Update tags for the note
+    if (archiveTags !== undefined && archiveTags.length > 0) {
+      await this.torrowClient.updateNoteTags(archiveId, archiveTags);
+      // Установка быстрого фильтра по тегам для архива
+      const solutionData = {
+        ...currentArchive.solutionData,
+        quickFilterTags: archiveTags,
+      };
+      await this.torrowClient.updateNoteSolutionData(archiveId, solutionData);
+    }
     return currentArchive;
   }
 

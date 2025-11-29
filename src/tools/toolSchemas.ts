@@ -6,12 +6,16 @@ import { RESOURCE_ARCHIVES_LIST } from '../resources/resourceConstants.js';
 
 export const CreateNoteSchema = z.object({
   archiveId: z.string().describe('ID of the archive (catalog) in which to create the note'),
-  phrase: z.string().describe('Phrase in format: <name>.<text>#tag#tag')
+  name: z.string().describe('Name of the note'),
+  text: z.string().describe('Text content of the note. Light html formatted text of the note including <img> and <a> tags.'),
+  tags: z.array(z.string()).describe('Tags for the note. Tags are used to group notes in the archive. Tag is simple string 3 - 100 characters [A-z, А-я, 0-9, /,\,-,_,.] or two strings separated by colon (<tag_value>:<tag_group>).')
 });
 
 export const UpdateNoteSchema = z.object({
   noteId: z.string().describe('ID of the note to update'),
-  phrase: z.string().describe('New phrase in format: <name>.<text>#tag#tag')
+  name: z.string().describe('Name of the note'),
+  text: z.string().describe('Text content of the note. Light html formatted text of the note including <img> and <a> tags.'),
+  tags: z.array(z.string()).describe('Tags for the note. Tags are used to group notes in the archive. Tag is simple string 3 - 100 characters [A-z, А-я, 0-9, /,\,-,_,.] or two strings separated by colon (<tag_value>:<tag_group>).')
 });
 
 export const DeleteNoteSchema = z.object({
@@ -23,17 +27,21 @@ export const SearchNotesSchema = z.object({
   phrase: z.string().optional().describe('Search phrase'),
   limit: z.coerce.number().optional().default(10).describe('Maximum number of results (default: 10)'),
   skip: z.coerce.number().optional().default(0).describe('Skip number of results (default: 0)'),
-  tags: z.array(z.string()).optional().describe('Tags to filter by'),
-  distance: z.coerce.number().optional().default(0).describe('Distance between results in characters (default: 0)')
+  tags: z.array(z.string()).optional().describe('Tags to filter by. Tags are used to group notes in the archive. Tag is simple string 3 - 100 characters [A-z, А-я, 0-9, /,\,-,_,.] or two strings separated by colon (<tag_value>:<tag_group>).'),
+  distance: z.coerce.number().optional().default(0).describe('Distance between results in characters (default: 0). Distance is used to search for notes with similar text.')
 });
 
 export const CreateArchiveSchema = z.object({
-  phrase: z.string().describe('Phrase in format: <name>.<text>#tag#tag')
+  name: z.string().describe('Name of the archive'),
+  text: z.string().describe('Text content of the archive. Light html formatted text of the archive.'),
+  tags: z.array(z.string()).describe('Tags for the archive. Tags are used to group notes in the archive. Tag is simple string 3 - 100 characters [A-z, А-я, 0-9, /,\,-,_,.] or two strings separated by colon (<tag_value>:<tag_group>).')
 });
 
 export const UpdateArchiveSchema = z.object({
   archiveId: z.string().describe('ID of the archive to update'),
-  phrase: z.string().describe('New phrase in format: <name>.<text>#tag#tag')
+  name: z.string().describe('Name of the archive'),
+  text: z.string().describe('Text content of the archive. Light html formatted text of the archive including <img> and <a> tags.'),
+  tags: z.array(z.string()).describe('Tags for the archive. Tags are used to group notes in the archive. Tag is simple string 3 - 100 characters [A-z, А-я, 0-9, /,\,-,_,.] or two strings separated by colon (<tag_value>:<tag_group>).')
 });
 
 export const DeleteArchiveSchema = z.object({
