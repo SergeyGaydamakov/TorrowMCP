@@ -17,8 +17,10 @@ export const DeleteNoteSchema = z.object({
 export const SearchNotesSchema = z.object({
     archiveId: z.string().describe(`ID of the archive (catalog) in which to search notes. List all available archives in resources ${RESOURCE_ARCHIVES_LIST}`),
     phrase: z.string().optional().describe('Search phrase'),
+    limit: z.coerce.number().optional().default(10).describe('Maximum number of results (default: 10)'),
+    skip: z.coerce.number().optional().default(0).describe('Skip number of results (default: 0)'),
     tags: z.array(z.string()).optional().describe('Tags to filter by'),
-    limit: z.coerce.number().optional().default(10).describe('Maximum number of results (default: 10)')
+    distance: z.coerce.number().optional().default(0).describe('Distance between results in characters (default: 0)')
 });
 export const CreateArchiveSchema = z.object({
     phrase: z.string().describe('Phrase in format: <name>.<text>#tag#tag')

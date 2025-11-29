@@ -2,9 +2,8 @@
  * Torrow API client wrapper
  */
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
-import { TorrowNote, TorrowContext, SearchParams, SearchResult, ApiError, NoteViewResponse } from '../common/types.js';
-import { TorrowApiError, AuthenticationError, ContextError } from '../common/errors.js';
-import { NotFoundError } from '../common/errors.js';
+import { TorrowCreateNoteInfo, TorrowNote, TorrowContext, NoteViewResponse } from '../common/types.js';
+import { TorrowApiError, AuthenticationError } from '../common/errors.js';
 
 // Torrow API base URL
 const DEFAULT_TORROW_API_BASE = 'https://torrow.net';
@@ -65,7 +64,7 @@ export class TorrowClient {
   /**
    * Creates a new note
    */
-  async createNote(note: Partial<TorrowNote>, parentId?: string, profileId?: string): Promise<TorrowNote> {
+  async createNote(createNoteInfo: TorrowCreateNoteInfo, parentId?: string, profileId?: string): Promise<TorrowNote> {
     const params: Record<string, string> = {};
     if (parentId) {
       params.parentId = parentId;
@@ -76,16 +75,16 @@ export class TorrowClient {
     
     // Build request body, filtering out undefined values
     const requestBody: Record<string, unknown> = {};
-    if (note.name !== undefined) {
-      requestBody.name = note.name;
+    if (createNoteInfo.name !== undefined) {
+      requestBody.name = createNoteInfo.name;
     }
-    if (note.data !== undefined) {
-      requestBody.data = note.data;
+    if (createNoteInfo.data !== undefined) {
+      requestBody.data = createNoteInfo.data;
     }
-    if (note.tags !== undefined) {
-      requestBody.tags = note.tags;
+    if (createNoteInfo.tags !== undefined) {
+      requestBody.tags = createNoteInfo.tags;
     }
-    requestBody.noteType = note.noteType || 'Text';
+    requestBody.noteType = createNoteInfo.noteType || 'Text';
     requestBody.discriminator = 'NoteItem';
     requestBody.files = [];
     requestBody.imagePreviewSize = 'Small';
@@ -101,22 +100,8 @@ export class TorrowClient {
   /**
    * Updates an existing note
    */
-  async updateNote(torrowId: string, note: Partial<TorrowNote>): Promise<TorrowNote> {
-    const currentNote = await this.getNote(torrowId);
-    if (!currentNote) {
-      throw new NotFoundError(`Заметка с ID "${torrowId}" не найдена`);
-    }
-    if (note.name !== undefined) {
-      currentNote.name = note.name;
-    }
-    if (note.data !== undefined) {
-      currentNote.data = note.data;
-    }
-    if (note.tags !== undefined && note.tags.length > 0) {
-      currentNote.tags = note.tags;
-    }
-    
-    const response: AxiosResponse<TorrowNote> = await this.client.put(`/api/v1/notes/${torrowId}`, currentNote);
+  async updateNote(note: Partial<TorrowNote>): Promise<TorrowNote> {
+    const response: AxiosResponse<TorrowNote> = await this.client.put(`/api/v1/notes/${note.id}`, note);
 
     return response.data;
   }
@@ -142,24 +127,9 @@ export class TorrowClient {
   }
 
   /**
-   * Maps NoteViewResponse to TorrowNote
-   */
-  private mapNoteViewToTorrowNote(item: NoteViewResponse): TorrowNote {
-    return {
-      id: item.itemObject?.id || '',
-      name: item.name || '',
-      data: item.data,
-      tags: item.tags,
-      noteType: item.noteType,
-      meta: item.itemObject?.meta,
-      groupInfo: item.groupInfo
-    };
-  }
-
-  /**
    * Gets user notes in element with specified parentId
    */
-  async getUserNotesByParentId(parentId: string, take?: number, skip?: number): Promise<TorrowNote[]> {
+  async getUserNotesByParentId(parentId: string, take?: number, skip?: number): Promise<NoteViewResponse[]> {
     const params: Record<string, string> = {
       take: take?.toString() || '10',
       skip: skip?.toString() || '0'
@@ -167,14 +137,13 @@ export class TorrowClient {
     
     const response: AxiosResponse<NoteViewResponse[]> = await this.client.get(`/api/v1/notes/${parentId}/views/user`, { params });
     
-    const items = response.data || [];
-    return items.map(item => this.mapNoteViewToTorrowNote(item));
+    return response.data || [];
   }
 
   /**
    * Gets pinned notes in element with specified parentId
    */
-  async getPinnedNotesByParentId(parentId: string, take?: number, skip?: number): Promise<TorrowNote[]> {
+  async getPinnedNotesByParentId(parentId: string, take?: number, skip?: number): Promise<NoteViewResponse[]> {
     const params: Record<string, string> = {
       take: take?.toString() || '10',
       skip: skip?.toString() || '0'
@@ -182,28 +151,28 @@ export class TorrowClient {
     
     const response: AxiosResponse<NoteViewResponse[]> = await this.client.get(`/api/v1/notes/${parentId}/views/pinned`, { params });
     
-    const items = response.data || [];
-    return items.map(item => this.mapNoteViewToTorrowNote(item));
+    return response.data || [];
   }
 
   /**
    * Sets note as group (archive)
    */
   async setNoteAsGroup(torrowId: string): Promise<void> {
-    await this.client.put(`/api/v1/notes/${torrowId}/group/set`, {
+    const groupBody = {
       rolesToInclude: ["Owner", "Manager"],
       rolesToReadItems: ["Owner", "Editor", "Manager", "Reader", "PublicReader"],
       rolesToReadSubscribers: null,
       rolesToSearchItems: ["Owner", "Editor", "Manager", "Reader", "PublicReader"],
       rolesToSearchSubscribers: null,
       rolesToUpdateItems: ["Owner", "Manager"]
-    });
+    };
+    await this.client.put(`/api/v1/notes/${torrowId}/group/set`, groupBody);
   }
 
   /**
    * Adds note to group (includes note in group)
    */
-  async addNoteToGroup(noteId: string, parentId: string, tags?: string[]): Promise<void> {
+  async addNoteToGroup(noteId: string, parentId: string, groupTags?: string[]): Promise<void> {
     const params: Record<string, string> = {
       parentId: parentId
     };
@@ -211,7 +180,7 @@ export class TorrowClient {
     const updateGroupsBody = [{
       groupId: parentId,
       include: true,
-      tags: tags || []
+      tags: groupTags || []
     }];
     await this.client.put(`/api/v1/notes/${noteId}/updategroups`, updateGroupsBody, { params });
   }
@@ -219,114 +188,42 @@ export class TorrowClient {
   /**
    * Searches notes
    */
-  async searchNotes(params: SearchParams): Promise<SearchResult> {
+  async searchNotes(text?: string, take?: number, skip?: number, archiveId?: string, tags?: string[], distance?: number): Promise<NoteViewResponse[]> {
     const queryParams: Record<string, string> = {};
     
-    if (params.text) {
-      queryParams.text = params.text;
+    if (text) {
+      queryParams.text = text;
     }
     
-    if (params.take !== undefined) {
-      queryParams.take = params.take.toString();
+    if (take !== undefined) {
+      queryParams.take = take.toString();
     } else {
       queryParams.take = '10'; // Default limit
     }
     
-    if (params.skip !== undefined) {
-      queryParams.skip = params.skip.toString();
+    if (skip !== undefined) {
+      queryParams.skip = skip.toString();
     } else {
       queryParams.skip = '0';
     }
 
-    if (params.distance) {
-      queryParams.distance = params.distance.toString();
+    // If archiveId is provided, search within that archive
+    if (archiveId) {
+      queryParams.groupIds = archiveId;
     }
 
-    // If archiveId is provided, search within that archive
-    if (params.archiveId) {
-      queryParams.groupIds = params.archiveId;
+    if (tags && tags.length > 0) {
+      queryParams.tags = tags.join(',');
+    }
+
+    if (distance) {
+      queryParams.distance = distance.toString();
     }
 
     const response: AxiosResponse<NoteViewResponse[]> = 
       await this.client.get('/api/v1/search/notes', { params: queryParams });
 
-    const items = response.data || [];
-    return {
-      items: items.map(item => this.mapNoteViewToTorrowNote(item)),
-      totalCount: items.length
-    };
-  }
-
-  /**
-   * Checks if note with name exists in archive
-   */
-  async noteExistsInArchive(name: string, archiveId?: string): Promise<boolean> {
-    try {
-      const result = await this.searchNotes({
-        text: name,
-        archiveId,
-        take: 20,    // Так поиск по подстроке, то нужно взять больше заметок, чтобы найти нужную
-        distance: undefined
-      });
-      
-      return result.items.some(note => 
-        note.name?.toLowerCase() === name.toLowerCase()
-      );
-    } catch (error) {
-      return false;
-    }
-  }
-
-  /**
-   * Gets archives list
-   */
-  async getArchives(mcpContextId?: string): Promise<TorrowNote[]> {
-    if (!mcpContextId) {
-      throw new ContextError('В методе getArchives не указан ID служебного раздела "MCP"');
-    }
-    try {
-      const result = await this.getUserNotesByParentId(mcpContextId, 20, 0);
-      
-      return result;
-    } catch (error) {
-      throw new TorrowApiError(`Failed to get archives: ${error}`);
-    }
-  }
-
-  /**
-   * Finds archive by name
-   */
-  async findArchiveByName(name: string, mcpContextId?: string): Promise<TorrowNote | null> {
-    if (!mcpContextId) {
-      throw new ContextError('В методе findArchiveByName не указан ID служебного раздела "MCP"');
-    }
-    try {
-      const archives = await this.getArchives(mcpContextId);
-      return archives.find(archive => 
-        archive.name?.toLowerCase() === name.toLowerCase()
-      ) || null;
-    } catch (error) {
-      return null;
-    }
-  }
-
-  /**
-   * Finds note by name in archive
-   */
-  async findNoteByName(name: string, archiveId?: string): Promise<TorrowNote | null> {
-    try {
-      const result = await this.searchNotes({
-        text: name,
-        archiveId,
-        take: 50
-      });
-      
-      return result.items.find(note => 
-        note.name?.toLowerCase() === name.toLowerCase()
-      ) || null;
-    } catch (error) {
-      return null;
-    }
+    return response.data || [];
   }
 
   /**
@@ -360,16 +257,4 @@ export class TorrowClient {
     return response.data || [];
   }
 
-  /**
-   * Поиск или создание служебного раздела "MCP"
-   */
-  async findOrCreateMCPContext(): Promise<TorrowContext> {
-    const contexts = await this.getContexts();
-    const mcpContext = contexts.find(context => context.name === 'MCP');
-    if (mcpContext) {
-      return mcpContext;
-    }
-    const newContext = await this.createContext('MCP');
-    return newContext;
-  }
 }

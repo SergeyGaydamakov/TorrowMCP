@@ -1,10 +1,12 @@
 {
   "mcpServers": {
-    "torrow": {
+    "torrow-mcp-service": {
       "command": "node",
       "args": ["C:\\Sergeyg\\Torrow\\AI\\TorrowMCP\\dist\\index.js"],
       "env": {
-        "TORROW_TOKEN": "your_torrow_token_here"
+        "TORROW_API_BASE": "https://torrow.net",
+        "TORROW_TOKEN": "your_torrow_token_here",
+        "MCP_SERVER_NAME": "torrow-mcp-service"
       }
     }
   }

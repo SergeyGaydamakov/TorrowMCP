@@ -87,6 +87,16 @@ export const tools: Tool[] = [
           type: 'number',
           default: 10,
           description: 'Maximum number of results (default: 10)'
+        },
+        skip: {
+          type: 'number',
+          default: 0,
+          description: 'Skip number of results (default: 0)'
+        },
+        distance: {
+          type: 'number',
+          default: 0,
+          description: 'Distance between results in characters (default: 0)'
         }
       },
       required: ['archiveId']

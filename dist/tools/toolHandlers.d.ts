@@ -1,11 +1,11 @@
 /**
  * Tool handlers for MCP server
  */
-import { CallToolRequest, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { TorrowClient } from '../torrow/torrowClient.js';
+import { CallToolRequest, CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import { TorrowService } from "../service/torrowService.js";
 export declare class ToolHandlers {
-    private torrowClient;
-    constructor(torrowClient: TorrowClient);
+    private torrowService;
+    constructor(torrowService: TorrowService);
     /**
      * Creates a new note
      */

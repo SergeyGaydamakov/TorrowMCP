@@ -2,6 +2,7 @@
  * Utilities for parsing phrases in format: <name>.<text>#tag#tag
  */
 import { ParsedPhrase } from '../common/types.js';
+import { ValidationError } from '../common/errors.js';
 
 /**
  * Parses a phrase in format: <name>.<text>#tag#tag
@@ -52,10 +53,10 @@ export function parsePhrase(phrase: string): ParsedPhrase {
  */
 export function validateName(name: string): void {
   if (!name || name.trim() === '') {
-    throw new Error('Name cannot be empty');
+    throw new ValidationError('Name cannot be empty');
   }
   
   if (name.length > 100) {
-    throw new Error('Name cannot be longer than 100 characters');
+    throw new ValidationError('Name cannot be longer than 100 characters');
   }
 }

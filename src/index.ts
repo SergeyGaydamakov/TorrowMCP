@@ -30,6 +30,7 @@ import { PromptHandlers } from './prompts/promptHandlers.js';
 import { resources } from './resources/resources.js';
 import { tools } from './tools/tools.js';
 import { prompts } from './prompts/prompts.js';
+import { TorrowService } from './service/torrowService.js';
 
 /**
  * Main MCP Server class
@@ -37,6 +38,7 @@ import { prompts } from './prompts/prompts.js';
 class TorrowMcpServer {
   private server: Server;
   private torrowClient: TorrowClient;
+  private torrowService: TorrowService;
   private resourceHandlers: ResourceHandlers;
   private toolHandlers: ToolHandlers;
   private promptHandlers: PromptHandlers;
@@ -76,11 +78,12 @@ class TorrowMcpServer {
     const token = this.getToken();
     const apiBase = this.getApiBase();
     this.torrowClient = new TorrowClient(token, apiBase);
+    this.torrowService = new TorrowService(this.torrowClient);
     
     // Initialize handlers
-    this.resourceHandlers = new ResourceHandlers(this.torrowClient);
-    this.toolHandlers = new ToolHandlers(this.torrowClient);
-    this.promptHandlers = new PromptHandlers(this.torrowClient);
+    this.resourceHandlers = new ResourceHandlers(this.torrowService);
+    this.toolHandlers = new ToolHandlers(this.torrowService);
+    this.promptHandlers = new PromptHandlers(this.torrowService);
 
     this.setupHandlers();
   }

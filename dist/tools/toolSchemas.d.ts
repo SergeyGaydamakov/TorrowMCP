@@ -16,11 +16,11 @@ export declare const UpdateNoteSchema: z.ZodObject<{
     noteId: z.ZodString;
     phrase: z.ZodString;
 }, "strip", z.ZodTypeAny, {
-    noteId: string;
     phrase: string;
+    noteId: string;
 }, {
-    noteId: string;
     phrase: string;
+    noteId: string;
 }>;
 export declare const DeleteNoteSchema: z.ZodObject<{
     noteId: z.ZodString;
@@ -32,9 +32,13 @@ export declare const DeleteNoteSchema: z.ZodObject<{
 export declare const SearchNotesSchema: z.ZodObject<{
     archiveId: z.ZodString;
     phrase: z.ZodOptional<z.ZodString>;
-    tags: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
     limit: z.ZodDefault<z.ZodOptional<z.ZodNumber>>;
+    skip: z.ZodDefault<z.ZodOptional<z.ZodNumber>>;
+    tags: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
+    distance: z.ZodDefault<z.ZodOptional<z.ZodNumber>>;
 }, "strip", z.ZodTypeAny, {
+    skip: number;
+    distance: number;
     archiveId: string;
     limit: number;
     tags?: string[] | undefined;
@@ -42,6 +46,8 @@ export declare const SearchNotesSchema: z.ZodObject<{
 }, {
     archiveId: string;
     tags?: string[] | undefined;
+    skip?: number | undefined;
+    distance?: number | undefined;
     phrase?: string | undefined;
     limit?: number | undefined;
 }>;

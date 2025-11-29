@@ -1,3 +1,4 @@
+import { ValidationError } from '../common/errors.js';
 /**
  * Parses a phrase in format: <name>.<text>#tag#tag
  * Example: "Рецепты. Описание приготовления блюд. #Еда"
@@ -38,10 +39,10 @@ export function parsePhrase(phrase) {
  */
 export function validateName(name) {
     if (!name || name.trim() === '') {
-        throw new Error('Name cannot be empty');
+        throw new ValidationError('Name cannot be empty');
     }
     if (name.length > 100) {
-        throw new Error('Name cannot be longer than 100 characters');
+        throw new ValidationError('Name cannot be longer than 100 characters');
     }
 }
 //# sourceMappingURL=phrase.js.map

@@ -1,155 +1,121 @@
-import { contextStore } from '../context/contextStore.js';
-import { NoteResourceSchema, ArchiveResourceSchema } from './resourceSchemas.js';
-import { NotFoundError, ValidationError } from '../common/errors.js';
+import { NotFoundError, ValidationError } from "../common/errors.js";
 export class ResourceHandlers {
-    torrowClient;
-    constructor(torrowClient) {
-        this.torrowClient = torrowClient;
+    torrowService;
+    constructor(torrowService) {
+        this.torrowService = torrowService;
     }
     /**
      * Handles note resource requests
      */
     async handleNoteResource(request) {
-        try {
-            // Parse URI to extract noteId
-            const uri = request.params.uri.toString();
-            // Try multiple URI patterns
-            let noteId;
-            // Pattern 1: torrow://note/{noteId}
-            const uriMatch1 = uri.match(/torrow:\/\/note\/(.+)$/);
-            if (uriMatch1 && uriMatch1[1]) {
-                noteId = decodeURIComponent(uriMatch1[1]);
-            }
-            // Pattern 2: torrow://note/{noteId} with query params or fragments
-            if (!noteId) {
-                const uriMatch2 = uri.match(/torrow:\/\/note\/([^?#]+)/);
-                if (uriMatch2 && uriMatch2[1]) {
-                    noteId = decodeURIComponent(uriMatch2[1]);
-                }
-            }
-            if (!noteId || noteId === 'undefined' || noteId === '{noteId}' || noteId.trim() === '') {
-                throw new ValidationError(`Invalid note URI format. Expected: torrow://note/{noteId} where {noteId} should be replaced with actual note ID (e.g., torrow://note/aae6203eb30ec9f2624061bd89b595f57). Got: ${uri}`);
-            }
-            const params = NoteResourceSchema.parse({ noteId });
-            const note = await this.torrowClient.getNote(params.noteId);
-            return {
-                contents: [{
-                        uri: request.params.uri,
-                        mimeType: 'application/json',
-                        text: JSON.stringify({
-                            id: note.id,
-                            name: note.name,
-                            text: note.data,
-                            tags: note.tags,
-                            type: 'note',
-                            meta: note.meta
-                        }, null, 2)
-                    }]
-            };
+        // Parse URI to extract noteId
+        const uri = request.params.uri.toString();
+        // Try multiple URI patterns
+        let noteId;
+        // Pattern 1: torrow://note/{noteId}
+        const uriMatch1 = uri.match(/torrow:\/\/note\/(.+)$/);
+        if (uriMatch1 && uriMatch1[1]) {
+            noteId = decodeURIComponent(uriMatch1[1]);
         }
-        catch (error) {
-            if (error instanceof ValidationError) {
-                throw error;
+        // Pattern 2: torrow://note/{noteId} with query params or fragments
+        if (!noteId) {
+            const uriMatch2 = uri.match(/torrow:\/\/note\/([^?#]+)/);
+            if (uriMatch2 && uriMatch2[1]) {
+                noteId = decodeURIComponent(uriMatch2[1]);
             }
-            if (error instanceof Error) {
-                throw new NotFoundError(`Note not found: ${error.message}`);
-            }
-            throw error;
         }
+        if (!noteId ||
+            noteId === "undefined" ||
+            noteId === "{noteId}" ||
+            noteId.trim() === "") {
+            throw new ValidationError(`Invalid note URI format. Expected: torrow://note/{noteId} where {noteId} should be replaced with actual note ID (e.g., torrow://note/aae6203eb30ec9f2624061bd89b595f57). Got: ${uri}`);
+        }
+        const note = await this.torrowService.getNote(noteId);
+        return {
+            contents: [
+                {
+                    uri: request.params.uri,
+                    mimeType: "application/json",
+                    text: JSON.stringify({
+                        id: note.id,
+                        name: note.name,
+                        text: note.data,
+                        tags: note.tags,
+                        type: "note",
+                        meta: note.meta,
+                    }, null, 2),
+                },
+            ],
+        };
     }
     /**
      * Handles archive resource requests
      */
     async handleArchiveResource(request) {
-        try {
-            // Parse URI to extract archiveId
-            const uri = request.params.uri.toString();
-            // Try multiple URI patterns
-            let archiveId;
-            // Pattern 1: torrow://archive/{archiveId}
-            const uriMatch1 = uri.match(/torrow:\/\/archive\/(.+)$/);
-            if (uriMatch1 && uriMatch1[1]) {
-                archiveId = decodeURIComponent(uriMatch1[1]);
-            }
-            // Pattern 2: torrow://archive/{archiveId} with query params or fragments
-            if (!archiveId) {
-                const uriMatch2 = uri.match(/torrow:\/\/archive\/([^?#]+)/);
-                if (uriMatch2 && uriMatch2[1]) {
-                    archiveId = decodeURIComponent(uriMatch2[1]);
-                }
-            }
-            if (!archiveId || archiveId === 'undefined' || archiveId === '{archiveId}' || archiveId.trim() === '') {
-                throw new ValidationError(`Invalid archive URI format. Expected: torrow://archive/{archiveId} where {archiveId} should be replaced with actual archive ID. Got: ${uri}`);
-            }
-            const params = ArchiveResourceSchema.parse({ archiveId });
-            const archive = await this.torrowClient.getNote(params.archiveId);
-            if (!archive.groupInfo?.rolesToSearchItems?.includes("PublicReader")) {
-                throw new NotFoundError('Specified ID is not an archive');
-            }
-            return {
-                contents: [{
-                        uri: request.params.uri,
-                        mimeType: 'application/json',
-                        text: JSON.stringify({
-                            id: archive.id,
-                            name: archive.name,
-                            text: archive.data,
-                            tags: archive.tags,
-                            type: 'archive',
-                            meta: archive.meta
-                        }, null, 2)
-                    }]
-            };
+        // Parse URI to extract archiveId
+        const uri = request.params.uri.toString();
+        // Try multiple URI patterns
+        let archiveId;
+        // Pattern 1: torrow://archive/{archiveId}
+        const uriMatch1 = uri.match(/torrow:\/\/archive\/(.+)$/);
+        if (uriMatch1 && uriMatch1[1]) {
+            archiveId = decodeURIComponent(uriMatch1[1]);
         }
-        catch (error) {
-            if (error instanceof ValidationError || error instanceof NotFoundError) {
-                throw error;
+        // Pattern 2: torrow://archive/{archiveId} with query params or fragments
+        if (!archiveId) {
+            const uriMatch2 = uri.match(/torrow:\/\/archive\/([^?#]+)/);
+            if (uriMatch2 && uriMatch2[1]) {
+                archiveId = decodeURIComponent(uriMatch2[1]);
             }
-            if (error instanceof Error) {
-                throw new NotFoundError(`Archive not found: ${error.message}`);
-            }
-            throw error;
         }
+        if (!archiveId ||
+            archiveId === "undefined" ||
+            archiveId === "{archiveId}" ||
+            archiveId.trim() === "") {
+            throw new ValidationError(`Invalid archive URI format. Expected: torrow://archive/{archiveId} where {archiveId} should be replaced with actual archive ID. Got: ${uri}`);
+        }
+        const archive = await this.torrowService.getArchive(archiveId);
+        return {
+            contents: [
+                {
+                    uri: request.params.uri,
+                    mimeType: "application/json",
+                    text: JSON.stringify({
+                        id: archive.id,
+                        name: archive.name,
+                        text: archive.data,
+                        tags: archive.tags,
+                        type: "archive",
+                        meta: archive.meta,
+                    }, null, 2),
+                },
+            ],
+        };
     }
     /**
      * Handles archives list resource requests
      */
     async handleArchivesListResource(request) {
-        try {
-            // Find or create MCP context
-            let mcpContextId = contextStore.getMcpContextId();
-            if (!mcpContextId) {
-                const mcpContext = await this.torrowClient.findOrCreateMCPContext();
-                mcpContextId = mcpContext.id;
-                contextStore.setMcpContextId(mcpContextId);
-            }
-            const archives = await this.torrowClient.getArchives(mcpContextId);
-            const currentArchiveId = contextStore.getArchiveId();
-            const archivesList = archives.map(archive => ({
-                id: archive.id,
-                name: archive.name,
-                text: archive.data,
-                tags: archive.tags,
-                meta: archive.meta,
-                isCurrent: archive.id === currentArchiveId
-            }));
-            return {
-                contents: [{
-                        uri: request.params.uri,
-                        mimeType: 'application/json',
-                        text: JSON.stringify({
-                            archives: archivesList,
-                            count: archivesList.length
-                        }, null, 2)
-                    }]
-            };
-        }
-        catch (error) {
-            if (error instanceof Error) {
-                throw new ValidationError(`Failed to get archives list: ${error.message}`);
-            }
-            throw error;
-        }
+        const archives = await this.torrowService.getArchives();
+        const archivesList = archives.map((archive) => ({
+            id: archive.id,
+            name: archive.name,
+            text: archive.data,
+            tags: archive.tags,
+            meta: archive.meta,
+        }));
+        return {
+            contents: [
+                {
+                    uri: request.params.uri,
+                    mimeType: "application/json",
+                    text: JSON.stringify({
+                        archives: archivesList,
+                        count: archivesList.length,
+                    }, null, 2),
+                },
+            ],
+        };
     }
     /**
      * Routes resource requests to appropriate handlers
@@ -163,11 +129,11 @@ export class ResourceHandlers {
             }
             const resourceType = uriParts[1].split("/")[0];
             switch (resourceType) {
-                case 'note':
+                case "note":
                     return this.handleNoteResource(request);
-                case 'archive':
+                case "archive":
                     return this.handleArchiveResource(request);
-                case 'archives':
+                case "archives":
                     return this.handleArchivesListResource(request);
                 default:
                     throw new NotFoundError(`Unknown resource type: ${resourceType}. Full request: ${JSON.stringify(request, null, 2)}`);

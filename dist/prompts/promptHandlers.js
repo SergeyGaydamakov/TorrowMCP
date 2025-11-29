@@ -1,211 +1,166 @@
-import { contextStore } from '../context/contextStore.js';
-import { ValidationError, NotFoundError } from '../common/errors.js';
-import { PROMPT_LIST_ARCHIVES, PROMPT_SEARCH_NOTES, PROMPT_ARCHIVE_STATS } from './promptConstants.js';
-import { ListArchivesSchema, SearchNotesSchema, ArchiveStatsSchema } from './promptSchemas.js';
+import { ValidationError } from "../common/errors.js";
+import { PROMPT_LIST_ARCHIVES, PROMPT_SEARCH_NOTES, PROMPT_ARCHIVE_STATS, } from "./promptConstants.js";
+import { ListArchivesSchema, SearchNotesSchema, ArchiveStatsSchema, } from "./promptSchemas.js";
 export class PromptHandlers {
-    torrowClient;
-    constructor(torrowClient) {
-        this.torrowClient = torrowClient;
+    torrowService;
+    constructor(torrowService) {
+        this.torrowService = torrowService;
     }
     /**
      * Lists all available archives
      */
     async listArchives(request) {
         ListArchivesSchema.parse(request.params.arguments || {});
-        try {
-            // Find or create MCP context
-            let mcpContextId = contextStore.getMcpContextId();
-            if (!mcpContextId) {
-                const mcpContext = await this.torrowClient.findOrCreateMCPContext();
-                mcpContextId = mcpContext.id;
-                contextStore.setMcpContextId(mcpContextId);
-            }
-            const archives = await this.torrowClient.getArchives(mcpContextId);
-            if (archives.length === 0) {
-                return {
-                    description: 'List of archives',
-                    messages: [{
-                            role: 'assistant',
-                            content: {
-                                type: 'text',
-                                text: 'Архивы не найдены. Создайте новый архив с помощью инструмента create_archive.'
-                            }
-                        }]
-                };
-            }
-            const archivesList = archives
-                .map((archive, index) => `${index + 1}. "${archive.name}" (ID: ${archive.id})${archive.tags?.length ? ' #' + archive.tags.join(' #') : ''}`)
-                .join('\n');
+        const archives = await this.torrowService.getArchives();
+        if (archives.length === 0) {
             return {
-                description: 'List of archives',
-                messages: [{
-                        role: 'assistant',
+                description: "List of archives",
+                messages: [
+                    {
+                        role: "assistant",
                         content: {
-                            type: 'text',
-                            text: `Найдено архивов: ${archives.length}\n\n${archivesList}`
-                        }
-                    }]
+                            type: "text",
+                            text: "Архивы не найдены. Создайте новый архив с помощью инструмента create_archive.",
+                        },
+                    },
+                ],
             };
         }
-        catch (error) {
-            throw new ValidationError(`Не удалось получить список архивов: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
-        }
+        const archivesList = archives
+            .map((archive, index) => `${index + 1}. "${archive.name}" (ID: ${archive.id})${archive.tags?.length ? " #" + archive.tags.join(" #") : ""}`)
+            .join("\n");
+        return {
+            description: "List of archives",
+            messages: [
+                {
+                    role: "assistant",
+                    content: {
+                        type: "text",
+                        text: `Найдено архивов: ${archives.length}\n\n${archivesList}`,
+                    },
+                },
+            ],
+        };
     }
     /**
      * Searches notes in an archive
      */
     async searchNotes(request) {
-        const params = SearchNotesSchema.parse(request.params.arguments || {});
-        try {
-            // Get archive to verify it exists
-            const archive = await this.torrowClient.getNote(params.archiveId);
-            const isArchive = archive.groupInfo?.rolesToSearchItems?.includes("PublicReader");
-            if (!isArchive) {
-                throw new ValidationError(`Указанный ID "${params.archiveId}" не является каталогом`);
-            }
-            // Parse tags if provided
-            const tags = params.tags
-                ? params.tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0)
-                : undefined;
-            const result = await this.torrowClient.searchNotes({
-                text: params.query,
-                tags: tags,
-                archiveId: params.archiveId,
-                take: params.limit
-            });
-            if (result.items.length === 0) {
-                return {
-                    description: 'Search results',
-                    messages: [{
-                            role: 'assistant',
-                            content: {
-                                type: 'text',
-                                text: `В архиве "${archive.name}" для указанных параметров заметок не найдено.`
-                            }
-                        }]
-                };
-            }
-            const notesList = result.items
-                .map((note, index) => `${index + 1}. "${note.name}" (ID: ${note.id})${note.tags?.length ? ' #' + note.tags.join(' #') : ''}`)
-                .join('\n');
+        const { query, limit, skip, archiveId, tags, distance } = SearchNotesSchema.parse(request.params.arguments || {});
+        // Get archive to verify it exists
+        const archive = await this.torrowService.getArchive(archiveId);
+        // Parse tags if provided
+        const parsedTags = tags
+            ? tags
+                .split(",")
+                .map((tag) => tag.trim())
+                .filter((tag) => tag.length > 0)
+            : undefined;
+        const result = await this.torrowService.searchNotes(query, limit, skip, archive.id, parsedTags, distance);
+        if (result.items.length === 0) {
             return {
-                description: 'Search results',
-                messages: [{
-                        role: 'assistant',
+                description: "Search results",
+                messages: [
+                    {
+                        role: "assistant",
                         content: {
-                            type: 'text',
-                            text: `Найдено заметок: ${result.items.length} в архиве "${archive.name}"\n\n${notesList}`
-                        }
-                    }]
+                            type: "text",
+                            text: `В архиве "${archive.name}" для указанных параметров заметок не найдено.`,
+                        },
+                    },
+                ],
             };
         }
-        catch (error) {
-            if (error instanceof ValidationError || error instanceof NotFoundError) {
-                throw error;
-            }
-            throw new ValidationError(`Не удалось выполнить поиск: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
-        }
+        const notesList = result.items
+            .map((note, index) => `${index + 1}. "${note.name}" (ID: ${note.id})${note.tags?.length ? " #" + note.tags.join(" #") : ""}`)
+            .join("\n");
+        return {
+            description: "Search results",
+            messages: [
+                {
+                    role: "assistant",
+                    content: {
+                        type: "text",
+                        text: `Найдено заметок: ${result.items.length} в архиве "${archive.name}"\n\n${notesList}`,
+                    },
+                },
+            ],
+        };
     }
     /**
      * Gets statistics about an archive
      */
     async archiveStats(request) {
         const params = ArchiveStatsSchema.parse(request.params.arguments || {});
-        try {
-            // Get archive to verify it exists
-            const archive = await this.torrowClient.getNote(params.archiveId);
-            const isArchive = archive.groupInfo?.rolesToSearchItems?.includes("PublicReader");
-            if (!isArchive) {
-                throw new ValidationError(`Указанный ID "${params.archiveId}" не является каталогом`);
+        const MAX_NOTES_COUNT = 101;
+        // Get archive to verify it exists
+        const archive = await this.torrowService.getArchive(params.archiveId);
+        // Get all notes in archive
+        const searchResult = await this.torrowService.searchNotes(undefined, MAX_NOTES_COUNT, undefined, params.archiveId, undefined, undefined);
+        const totalNotes = searchResult.totalCount;
+        // Collect all tags
+        const tagCounts = {};
+        searchResult.items.forEach((note) => {
+            if (note.tags) {
+                note.tags.forEach((tag) => {
+                    tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+                });
             }
-            // Get all notes in archive
-            const searchResult = await this.torrowClient.searchNotes({
-                archiveId: params.archiveId,
-                take: 1000 // Get all notes for statistics
-            });
-            const notes = searchResult.items;
-            const totalNotes = notes.length;
-            // Collect all tags
-            const tagCounts = {};
-            notes.forEach(note => {
-                if (note.tags) {
-                    note.tags.forEach(tag => {
-                        tagCounts[tag] = (tagCounts[tag] || 0) + 1;
-                    });
-                }
-            });
-            const uniqueTags = Object.keys(tagCounts).length;
-            const topTags = Object.entries(tagCounts)
-                .sort((a, b) => b[1] - a[1])
-                .slice(0, 10)
-                .map(([tag, count]) => `  - ${tag}: ${count}`)
-                .join('\n');
-            const statsText = `Статистика архива "${archive.name}" (ID: ${params.archiveId}):\n\n` +
-                `Всего заметок: ${totalNotes}\n` +
-                `Уникальных тегов: ${uniqueTags}\n` +
-                (topTags ? `\nТоп-10 тегов:\n${topTags}` : '\nТеги отсутствуют');
-            return {
-                description: 'Archive statistics',
-                messages: [{
-                        role: 'assistant',
-                        content: {
-                            type: 'text',
-                            text: statsText
-                        }
-                    }]
-            };
-        }
-        catch (error) {
-            if (error instanceof ValidationError || error instanceof NotFoundError) {
-                throw error;
-            }
-            throw new ValidationError(`Не удалось получить статистику: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
-        }
+        });
+        const uniqueTags = Object.keys(tagCounts).length;
+        const topTags = Object.entries(tagCounts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 10)
+            .map(([tag, count]) => `  - ${tag}: ${count}`)
+            .join("\n");
+        const statsText = `Статистика архива "${archive.name}" (ID: ${params.archiveId}):\n\n` +
+            `Всего заметок: ${totalNotes == MAX_NOTES_COUNT ? "более " + totalNotes : totalNotes}\n` +
+            `Уникальных тегов: ${uniqueTags}\n` +
+            (topTags ? `\nТоп-10 тегов:\n${topTags}` : "\nТеги отсутствуют");
+        return {
+            description: "Archive statistics",
+            messages: [
+                {
+                    role: "assistant",
+                    content: {
+                        type: "text",
+                        text: statsText,
+                    },
+                },
+            ],
+        };
     }
     /**
      * Handles completion requests for prompt arguments
      */
     async handleCompletionRequest(request) {
         // Check if this is a prompt completion request
-        if (request.params.ref.type !== 'ref/prompt') {
-            throw new ValidationError('Completion is only supported for prompts');
+        if (request.params.ref.type !== "ref/prompt") {
+            throw new ValidationError("Completion is only supported for prompts");
         }
         const promptName = request.params.ref.name;
         const argumentName = request.params.argument.name;
-        const argumentValue = request.params.argument.value || '';
+        const argumentValue = request.params.argument.value || "";
         // Handle completion for PROMPT_SEARCH_NOTES - archiveId
-        if (promptName === PROMPT_SEARCH_NOTES && argumentName === 'archiveId') {
+        if (promptName === PROMPT_SEARCH_NOTES && argumentName === "archiveId") {
             try {
-                // Ensure MCP context is initialized
-                if (!contextStore.getMcpContextId()) {
-                    const mcpContext = await this.torrowClient.findOrCreateMCPContext();
-                    if (!mcpContext) {
-                        return {
-                            completion: {
-                                values: [],
-                                total: 0,
-                                hasMore: false
-                            }
-                        };
-                    }
-                    contextStore.setMcpContextId(mcpContext.id);
-                }
-                const mcpContextId = contextStore.getMcpContextId();
-                const archives = await this.torrowClient.getArchives(mcpContextId);
+                const archives = await this.torrowService.getArchives();
                 // Filter archives by the current input value (case-insensitive)
                 const filteredArchives = archives
-                    .filter(archive => archive.id &&
+                    .filter((archive) => archive.id &&
                     (archive.id.toLowerCase().includes(argumentValue.toLowerCase()) ||
-                        archive.name?.toLowerCase().includes(argumentValue.toLowerCase())))
-                    .map(archive => archive.id || '')
-                    .filter(id => id.length > 0)
+                        archive.name
+                            ?.toLowerCase()
+                            .includes(argumentValue.toLowerCase())))
+                    .map((archive) => archive.id || "")
+                    .filter((id) => id.length > 0)
                     .slice(0, 100); // Limit to 100 items as per MCP spec
                 return {
                     completion: {
                         values: filteredArchives,
                         total: filteredArchives.length,
-                        hasMore: false
-                    }
+                        hasMore: false,
+                    },
                 };
             }
             catch (error) {
@@ -214,44 +169,31 @@ export class PromptHandlers {
                     completion: {
                         values: [],
                         total: 0,
-                        hasMore: false
-                    }
+                        hasMore: false,
+                    },
                 };
             }
         }
         // Handle completion for PROMPT_ARCHIVE_STATS - archiveId
-        if (promptName === PROMPT_ARCHIVE_STATS && argumentName === 'archiveId') {
+        if (promptName === PROMPT_ARCHIVE_STATS && argumentName === "archiveId") {
             try {
-                // Ensure MCP context is initialized
-                if (!contextStore.getMcpContextId()) {
-                    const mcpContext = await this.torrowClient.findOrCreateMCPContext();
-                    if (!mcpContext) {
-                        return {
-                            completion: {
-                                values: [],
-                                total: 0,
-                                hasMore: false
-                            }
-                        };
-                    }
-                    contextStore.setMcpContextId(mcpContext.id);
-                }
-                const mcpContextId = contextStore.getMcpContextId();
-                const archives = await this.torrowClient.getArchives(mcpContextId);
+                const archives = await this.torrowService.getArchives();
                 // Filter archives by the current input value (case-insensitive)
                 const filteredArchives = archives
-                    .filter(archive => archive.id &&
+                    .filter((archive) => archive.id &&
                     (archive.id.toLowerCase().includes(argumentValue.toLowerCase()) ||
-                        archive.name?.toLowerCase().includes(argumentValue.toLowerCase())))
-                    .map(archive => archive.id || '')
-                    .filter(id => id.length > 0)
+                        archive.name
+                            ?.toLowerCase()
+                            .includes(argumentValue.toLowerCase())))
+                    .map((archive) => archive.id || "")
+                    .filter((id) => id.length > 0)
                     .slice(0, 100); // Limit to 100 items as per MCP spec
                 return {
                     completion: {
                         values: filteredArchives,
                         total: filteredArchives.length,
-                        hasMore: false
-                    }
+                        hasMore: false,
+                    },
                 };
             }
             catch (error) {
@@ -260,8 +202,8 @@ export class PromptHandlers {
                     completion: {
                         values: [],
                         total: 0,
-                        hasMore: false
-                    }
+                        hasMore: false,
+                    },
                 };
             }
         }
@@ -270,8 +212,8 @@ export class PromptHandlers {
             completion: {
                 values: [],
                 total: 0,
-                hasMore: false
-            }
+                hasMore: false,
+            },
         };
     }
     /**

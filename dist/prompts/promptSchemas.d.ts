@@ -4,11 +4,15 @@
 import { z } from 'zod';
 export declare const ListArchivesSchema: z.ZodObject<{}, "strip", z.ZodTypeAny, {}, {}>;
 export declare const SearchNotesSchema: z.ZodObject<{
-    archiveId: z.ZodString;
     query: z.ZodOptional<z.ZodString>;
-    tags: z.ZodOptional<z.ZodString>;
+    archiveId: z.ZodString;
     limit: z.ZodDefault<z.ZodOptional<z.ZodNumber>>;
+    skip: z.ZodDefault<z.ZodOptional<z.ZodNumber>>;
+    tags: z.ZodOptional<z.ZodString>;
+    distance: z.ZodDefault<z.ZodOptional<z.ZodNumber>>;
 }, "strip", z.ZodTypeAny, {
+    skip: number;
+    distance: number;
     archiveId: string;
     limit: number;
     tags?: string | undefined;
@@ -16,6 +20,8 @@ export declare const SearchNotesSchema: z.ZodObject<{
 }, {
     archiveId: string;
     tags?: string | undefined;
+    skip?: number | undefined;
+    distance?: number | undefined;
     limit?: number | undefined;
     query?: string | undefined;
 }>;

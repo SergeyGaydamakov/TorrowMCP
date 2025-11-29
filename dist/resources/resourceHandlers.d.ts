@@ -1,11 +1,11 @@
 /**
  * Resource handlers for MCP server
  */
-import { ReadResourceRequest, ReadResourceResult } from '@modelcontextprotocol/sdk/types.js';
-import { TorrowClient } from '../torrow/torrowClient.js';
+import { ReadResourceRequest, ReadResourceResult } from "@modelcontextprotocol/sdk/types.js";
+import { TorrowService } from "../service/torrowService.js";
 export declare class ResourceHandlers {
-    private torrowClient;
-    constructor(torrowClient: TorrowClient);
+    private torrowService;
+    constructor(torrowService: TorrowService);
     /**
      * Handles note resource requests
      */

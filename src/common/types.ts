@@ -3,6 +3,13 @@
  */
 
 // Базовые типы для Torrow API
+export interface TorrowCreateNoteInfo {
+  name: string;
+  data?: string;
+  tags?: string[];
+  noteType?: string;
+}
+
 export interface TorrowNote {
   id: string;
   name: string;
@@ -18,6 +25,12 @@ export interface TorrowNote {
     rolesToSearchItems?: string[];
   };
 }
+
+export interface TorrowNoteInArchive extends TorrowNote {
+  archiveId: string;
+  archiveName: string;
+}
+
 
 export interface TorrowArchive extends TorrowNote {
   groupInfo: {

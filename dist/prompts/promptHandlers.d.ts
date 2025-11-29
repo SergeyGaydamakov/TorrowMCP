@@ -1,11 +1,11 @@
 /**
  * Prompt handlers for MCP server
  */
-import { GetPromptRequest, GetPromptResult, CompleteRequest, CompleteResult } from '@modelcontextprotocol/sdk/types.js';
-import { TorrowClient } from '../torrow/torrowClient.js';
+import { GetPromptRequest, GetPromptResult, CompleteRequest, CompleteResult } from "@modelcontextprotocol/sdk/types.js";
+import { TorrowService } from "../service/torrowService.js";
 export declare class PromptHandlers {
-    private torrowClient;
-    constructor(torrowClient: TorrowClient);
+    private torrowService;
+    constructor(torrowService: TorrowService);
     /**
      * Lists all available archives
      */
