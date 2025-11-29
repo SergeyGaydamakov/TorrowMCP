@@ -43,9 +43,59 @@ npm run build
 
 ### Cursor
 
-1. Откройте настройки MCP в Cursor
-2. Добавьте аналогичную конфигурацию
+#### Консольный режим (stdio) - рекомендуется
+
+1. Откройте файл конфигурации MCP:
+   - **Windows**: `%AppData%\Cursor\User\globalStorage\mcp.json`
+   - **macOS**: `~/Library/Application Support/Cursor/User/globalStorage/mcp.json`
+   - **Linux**: `~/.config/Cursor/User/globalStorage/mcp.json`
+
+2. Добавьте конфигурацию (замените путь на ваш):
+
+```json
+{
+  "mcpServers": {
+    "torrow-mcp-service": {
+      "command": "node",
+      "args": ["C:\\Sergeyg\\Torrow\\AI\\TorrowMCP\\dist\\index.js"],
+      "env": {
+        "TORROW_API_BASE": "https://torrow.net",
+        "TORROW_TOKEN": "your_torrow_token_here",
+        "MCP_SERVER_NAME": "torrow-mcp-service"
+      }
+    }
+  }
+}
+```
+
 3. Перезапустите Cursor
+
+#### HTTP режим
+
+1. Запустите HTTP сервер:
+   ```bash
+   npm run build
+   npm run start:http
+   ```
+
+2. Откройте файл конфигурации MCP (см. пути выше)
+
+3. Добавьте конфигурацию для HTTP режима:
+
+```json
+{
+  "mcpServers": {
+    "torrow-mcp-service": {
+      "url": "http://localhost:3000/mcp",
+      "env": {
+        "TORROW_TOKEN": "your_torrow_token_here"
+      }
+    }
+  }
+}
+```
+
+4. Перезапустите Cursor
 
 ## Шаг 3: Проверка
 
