@@ -32,7 +32,10 @@ class TorrowMcpServer {
     // Common server identifier names: "torrow", "user-torrow", "torrow-mcp-service"
     // The server name can be configured via MCP_SERVER_NAME or TORROW_MCP_SERVER_NAME
     // environment variable or command line argument (e.g., MCP_SERVER_NAME=torrow).
-    const serverConfig = createServer();
+    // 
+    // In STDIO mode, token is taken from environment variable (TORROW_TOKEN)
+    // This is different from HTTP mode, which uses token from client Authorization header
+    const serverConfig = createServer(); // No config passed - uses TORROW_TOKEN from environment
     this.server = serverConfig.server;
     this.serverName = serverConfig.serverName;
   }
